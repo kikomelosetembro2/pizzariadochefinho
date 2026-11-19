@@ -85,7 +85,7 @@ export const Header: React.FC = () => {
             >
               <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-[#008C45]/40 shadow-lg bg-[#262C29] shrink-0">
                 <img
-                  src="/src/assets/images/chefinho_artisan_logo_1794456662442.jpg"
+                  src="/images/chefinho_artisan_logo_1794456662442.jpg"
                   alt="Pizzaria do Chefinho"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform"

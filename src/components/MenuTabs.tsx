@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { GlassWater, Leaf, Pizza, Search, Sparkles, Utensils, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCategory } from '../types';
@@ -21,9 +21,13 @@ const CATEGORY_TABS: CategoryTabItem[] = [
 ];
 
 export const MenuTabs: React.FC = () => {
-  const { products } = useApp();
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'todas'>('todas');
-  const [searchTerm, setSearchTerm] = useState('');
+  const {
+    products,
+    selectedCategory,
+    setSelectedCategory,
+    searchTerm,
+    setSearchTerm,
+  } = useApp();
 
   // Filter products by category and search
   const filteredProducts = products.filter((product) => {

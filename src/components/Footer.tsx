@@ -22,7 +22,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl overflow-hidden border border-[#008C45]/40 shadow bg-[#1F2421]">
                 <img
-                  src="/src/assets/images/chefinho_artisan_logo_1794456662442.jpg"
+                  src="/images/chefinho_artisan_logo_1794456662442.jpg"
                   alt="Pizzaria do Chefinho"
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"
@@ -98,11 +98,23 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-stone-400">
-          <div>
-            © {new Date().getFullYear()} Pizzaria do Chefinho. Todos os direitos reservados. Rio Branco - AC.
+        <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-[11px] text-stone-400 text-center sm:text-left">
+          <div className="space-y-0.5">
+            <div>
+              © {new Date().getFullYear()} Pizzaria do Chefinho. Todos os direitos reservados. Rio Branco - AC.
+            </div>
+            <div className="text-[10px] text-stone-500">
+              Web Desenvolvedor: <span className="text-stone-300 font-medium">Francisco Araujo (kiko)</span> ·{' '}
+              <a
+                href="tel:+5568992827744"
+                className="hover:text-[#008C45] transition-colors tabular-nums"
+              >
+                (68) 99282-7744
+              </a>{' '}
+              · © {new Date().getFullYear()} Copyright
+            </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
             <span>Autêntica receita italiana ·</span>
             <span className="text-[#008C45] font-semibold">Pizzaria do Chefinho</span>
           </div>

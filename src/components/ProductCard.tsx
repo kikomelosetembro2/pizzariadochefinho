@@ -58,7 +58,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             alt={product.name}
             referrerPolicy="no-referrer"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/src/assets/images/hero_pizzaria_oven_1794456659172.jpg';
+              (e.target as HTMLImageElement).src = '/images/hero_pizzaria_oven_1794456659172.jpg';
             }}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />

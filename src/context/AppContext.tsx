@@ -16,6 +16,7 @@ import {
   OrderType,
   PaymentMethod,
   Product,
+  ProductCategory,
 } from '../types';
 import { checkBusinessHours, getOperatingHoursOverride, setOperatingHoursOverride } from '../utils/businessHours';
 
@@ -85,13 +86,17 @@ interface AppContextType {
   toggleProductAvailability: (id: string) => void;
   updateCrustPrice: (id: string, price: number) => void;
   updateExtraPrice: (id: string, price: number) => void;
-  // Modals state
+  // Modals & Catalog Filter state
   activeModal: 'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | null;
   setActiveModal: (modal: 'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | null) => void;
   selectedProductForModal: Product | null;
   setSelectedProductForModal: (p: Product | null) => void;
   activeReceiptOrder: Order | null;
   setActiveReceiptOrder: (o: Order | null) => void;
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  selectedCategory: ProductCategory | 'todas';
+  setSelectedCategory: (category: ProductCategory | 'todas') => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -111,7 +116,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [products, setProducts] = useState<Product[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      return saved ? JSON.parse(saved) : INITIAL_PRODUCTS;
+      if (!saved) return INITIAL_PRODUCTS;
+      const parsed: Product[] = JSON.parse(saved);
+      return parsed.map((p) => ({
+        ...p,
+        image: p.image?.startsWith('/src/assets/images/')
+          ? p.image.replace('/src/assets/images/', '/images/')
+          : p.image,
+      }));
     } catch {
       return INITIAL_PRODUCTS;
     }
@@ -183,6 +195,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeModal, setActiveModal] = useState<'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | null>(null);
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'todas'>('todas');
 
   // FCM Cloud Messaging Notification State
   const [fcmNotification, setFcmNotification] = useState<FCMNotification | null>(null);
@@ -620,6 +634,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedProductForModal,
         activeReceiptOrder,
         setActiveReceiptOrder,
+        searchTerm,
+        setSearchTerm,
+        selectedCategory,
+        setSelectedCategory,
       }}
     >
       {children}

@@ -176,7 +176,7 @@ export const AdminDashboard: React.FC = () => {
       description: newProdDesc.trim() || 'Receita italiana da casa preparada artesanalmente.',
       price: basePriceNum,
       priceLarge: largePriceNum,
-      image: '/src/assets/images/pizza_calabresa_special_1794456660537.jpg',
+      image: '/images/pizza_calabresa_special_1794456660537.jpg',
       available: true,
     });
 
