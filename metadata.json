@@ -1,0 +1,6 @@
+{
+  "name": "Pizzaria do Chefinho",
+  "description": "Cardápio digital artesanal, delivery e gestão PDV para a Pizzaria do Chefinho em Rio Branco - AC.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
