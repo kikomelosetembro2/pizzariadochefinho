@@ -261,7 +261,7 @@ export const HeroBanner: React.FC = () => {
               </div>
 
               {/* Scrim Overlay */}
-              <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-[#1F2421]/95 via-[#1F2421]/60 to-transparent">
+              <div className="hero-image-scrim absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-[#1F2421]/95 via-[#1F2421]/60 to-transparent">
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-[11px] font-bold text-[#008C45] uppercase tracking-wider block">
@@ -289,22 +289,48 @@ export const HeroBanner: React.FC = () => {
             <div className="w-10 h-10 rounded-xl bg-[#008C45]/20 border border-[#008C45]/40 flex items-center justify-center text-[#008C45] shrink-0">
               <Gift className="w-5 h-5" />
             </div>
-            <div>
-              <div className="text-sm font-bold text-[#FAF8F5] flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-[#FAF8F5] flex flex-wrap items-center gap-2">
                 <span>Programa Fidelidade & Indicação</span>
                 <span className="text-[11px] text-[#008C45] font-bold">10 pedidos = 10% OFF</span>
               </div>
-              <div className="text-xs text-stone-300">
-                {currentUser ? (
-                  <span>
-                    Você tem <strong>{currentUser.completedOrdersCount}/10</strong> pedidos concluídos no seu cartão digital!
-                  </span>
-                ) : (
-                  <span>
-                    Cadastre-se com seu Google Gmail para acumular carimbos digitais e indicar amigos para ganhar 5% de desconto.
-                  </span>
-                )}
-              </div>
+              {currentUser ? (
+                <div className="mt-1 space-y-1.5 max-w-md">
+                  <div className="text-xs text-stone-300">
+                    {currentUser.loyaltyDiscountAvailable ? (
+                      <span className="text-[#008C45] font-bold">
+                        🎉 Cupom de 10% OFF desbloqueado e pronto para uso!
+                      </span>
+                    ) : (
+                      <span>
+                        <strong>{currentUser.completedOrdersCount % 10}/10</strong> pedidos ·{' '}
+                        <strong className="text-[#FAF8F5]">
+                          {10 - (currentUser.completedOrdersCount % 10) === 1
+                            ? 'Falta apenas 1 pedido'
+                            : `Faltam ${10 - (currentUser.completedOrdersCount % 10)} pedidos`}
+                        </strong>{' '}
+                        para seu cupom de 10% OFF
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[#191E1B] border border-white/10 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#008C45] to-[#C8102E] transition-all duration-500"
+                      style={{
+                        width: `${
+                          currentUser.loyaltyDiscountAvailable
+                            ? 100
+                            : Math.max((currentUser.completedOrdersCount % 10) * 10, 6)
+                        }%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-stone-300">
+                  Cadastre-se com seu Google Gmail para acumular carimbos digitais e indicar amigos para ganhar 5% de desconto.
+                </div>
+              )}
             </div>
           </div>
 

@@ -16,7 +16,12 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatPriceBRL } from '../utils/whatsapp';
+import {
+  formatPriceBRL,
+  getWhatsAppPaymentProofUrl,
+  getWhatsAppSupportUrl,
+  WHATSAPP_FORMATTED_DISPLAY,
+} from '../utils/whatsapp';
 
 export const CustomerProfileModal: React.FC = () => {
   const {
@@ -43,6 +48,15 @@ export const CustomerProfileModal: React.FC = () => {
   const progress10 = currentUser.completedOrdersCount % 10;
   const stampsCount = currentUser.loyaltyDiscountAvailable ? 10 : progress10;
   const is10Unlocked = currentUser.loyaltyDiscountAvailable;
+  const remainingOrders = is10Unlocked ? 0 : 10 - stampsCount;
+  const progressPercent = Math.min(100, Math.round((stampsCount / 10) * 100));
+
+  const handleGoToMenu = () => {
+    setActiveModal(null);
+    setTimeout(() => {
+      document.getElementById('cardapio-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
 
   const referralUrl = `${window.location.origin}?ref=${currentUser.referralCode}`;
 
@@ -141,27 +155,86 @@ export const CustomerProfileModal: React.FC = () => {
             )}
           </div>
 
-          {/* 1. Cartão Fidelidade Digital (10 Pedidos) */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#262C29] via-[#212724] to-[#1C211E] border border-[#008C45]/40 shadow-lg space-y-3">
-            <div className="flex items-center justify-between">
+          {/* 1. Cartão Fidelidade Digital & Barra de Progresso (10 Pedidos) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#262C29] via-[#212724] to-[#1C211E] border border-[#008C45]/40 shadow-lg space-y-4">
+            <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Gift className="w-5 h-5 text-[#008C45]" />
                 <h3 className="text-sm font-bold text-[#FAF8F5] uppercase tracking-wider">
-                  Cartão Fidelidade Chefinho (10 Selos)
+                  Cartão Fidelidade Chefinho
                 </h3>
               </div>
-              <span className="text-xs font-bold text-[#008C45] tabular-nums">
-                {stampsCount}/10 Selos
+              <span className="px-2.5 py-0.5 rounded-full bg-[#008C45]/20 border border-[#008C45]/40 text-xs font-extrabold text-[#008C45] tabular-nums">
+                {stampsCount}/10 pedidos · {progressPercent}%
               </span>
             </div>
 
-            <p className="text-xs text-stone-300">
-              A cada <strong>10 pedidos concluídos</strong>, você ganha automaticamente{' '}
-              <strong className="text-[#008C45]">10% de desconto</strong> no seu próximo pedido!
-            </p>
+            {/* Visual Remaining Orders Counter + Progress Bar */}
+            <div className="p-3.5 rounded-xl bg-[#191E1B] border border-white/10 space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  {is10Unlocked ? (
+                    <div className="text-sm font-extrabold text-[#008C45]">
+                      🎉 Recompensa Desbloqueada!
+                    </div>
+                  ) : (
+                    <div className="text-sm font-extrabold text-[#FAF8F5]">
+                      {remainingOrders === 1 ? (
+                        <>
+                          Falta apenas <span className="text-[#C8102E]">1 pedido</span>!
+                        </>
+                      ) : (
+                        <>
+                          Faltam <span className="text-[#008C45]">{remainingOrders} pedidos</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <p className="text-[11px] text-stone-300 mt-0.5">
+                    {is10Unlocked
+                      ? 'Seu cupom automático de 10% OFF já está pronto para usar no próximo pedido.'
+                      : 'Complete 10 pedidos concluídos para ganhar automaticamente um cupom de 10% OFF.'}
+                  </p>
+                </div>
+
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-[#262C29] border border-[#008C45]/40 flex flex-col items-center justify-center">
+                  <span className="text-base font-black text-[#FAF8F5] leading-none tabular-nums">
+                    {remainingOrders}
+                  </span>
+                  <span className="text-[9px] font-bold uppercase text-stone-400 mt-0.5">
+                    {remainingOrders === 1 ? 'falta' : 'faltam'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Animated Progress Bar */}
+              <div className="space-y-1.5">
+                <div
+                  className="w-full h-3.5 rounded-full bg-[#262C29] border border-white/10 overflow-hidden p-0.5"
+                  role="progressbar"
+                  aria-valuenow={stampsCount}
+                  aria-valuemin={0}
+                  aria-valuemax={10}
+                  aria-label="Progresso para o cupom fidelidade de 10% OFF"
+                >
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[#008C45] via-emerald-500 to-[#C8102E] transition-all duration-500 ease-out"
+                    style={{ width: `${Math.max(progressPercent, stampsCount > 0 ? 8 : 0)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between text-[10px] font-semibold text-stone-400 tabular-nums">
+                  <span>0 pedidos</span>
+                  <span className={stampsCount >= 5 ? 'text-[#008C45]' : ''}>5/10 Metade</span>
+                  <span className="text-[#C8102E] font-bold flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    10/10 Cupom 10% OFF
+                  </span>
+                </div>
+              </div>
+            </div>
 
             {/* 10 Visual Stamp Slots */}
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 pt-2">
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2">
               {Array.from({ length: 10 }).map((_, index) => {
                 const isStamped = index < stampsCount;
                 const isTenth = index === 9;
@@ -191,17 +264,32 @@ export const CustomerProfileModal: React.FC = () => {
               })}
             </div>
 
-            {/* Status Reward Badge */}
+            {/* Status Reward Badge & Recurrence CTA */}
             {is10Unlocked ? (
-              <div className="p-3 rounded-xl bg-[#008C45]/20 border border-[#008C45]/40 text-[#008C45] text-xs font-bold flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-[#008C45]/20 border border-[#008C45]/40 text-[#008C45] text-xs font-bold flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span>🎉 Cupom de 10% OFF liberado para seu próximo pedido!</span>
-                <span className="font-extrabold text-white uppercase text-[10px] bg-[#008C45] px-2 py-0.5 rounded">
-                  Ativo
-                </span>
+                <button
+                  type="button"
+                  onClick={handleGoToMenu}
+                  className="px-3 py-1.5 rounded-lg bg-[#008C45] hover:bg-[#00753a] text-white font-extrabold text-[11px] transition shrink-0"
+                >
+                  Usar Cupom Agora
+                </button>
               </div>
             ) : (
-              <div className="text-[11px] text-stone-400">
-                Faltam apenas <strong>{10 - stampsCount}</strong> pedido(s) para liberar seu desconto de 10%!
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-0.5">
+                <span className="text-[11px] text-stone-300">
+                  {remainingOrders === 1
+                    ? '🔥 Você está a apenas 1 pedido de liberar seu cupom de 10% OFF!'
+                    : `Peça mais ${remainingOrders} vezes para desbloquear 10% de desconto automático.`}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGoToMenu}
+                  className="px-3 py-1.5 rounded-lg bg-[#C8102E] hover:bg-[#A90D26] text-white font-bold text-[11px] transition shrink-0 self-start sm:self-auto"
+                >
+                  Fazer Pedido
+                </button>
               </div>
             )}
           </div>
@@ -324,21 +412,45 @@ export const CustomerProfileModal: React.FC = () => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => {
-                        setActiveReceiptOrder(ord);
-                        setActiveModal('receipt');
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1 transition shrink-0"
-                    >
-                      <Receipt className="w-3.5 h-3.5" />
-                      <span>Comanda</span>
-                    </button>
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 shrink-0">
+                      <a
+                        href={getWhatsAppPaymentProofUrl(ord)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-1.5 rounded-lg bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/30 text-[11px] font-bold flex items-center gap-1 transition"
+                        title={`Enviar comprovante para ${WHATSAPP_FORMATTED_DISPLAY}`}
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 fill-current" />
+                        <span>Comprovante</span>
+                      </a>
+
+                      <button
+                        onClick={() => {
+                          setActiveReceiptOrder(ord);
+                          setActiveModal('receipt');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1 transition"
+                      >
+                        <Receipt className="w-3.5 h-3.5" />
+                        <span>Comanda</span>
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
           </div>
+
+          {/* 5. Botão de Atendimento WhatsApp */}
+          <a
+            href={getWhatsAppSupportUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition"
+          >
+            <MessageCircle className="w-4 h-4 fill-current" />
+            <span>Atendimento WhatsApp · {WHATSAPP_FORMATTED_DISPLAY}</span>
+          </a>
         </div>
       </div>
     </div>

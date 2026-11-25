@@ -16,7 +16,12 @@ import {
 import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
 import { OrderType, PaymentMethod } from '../types';
-import { formatPriceBRL, openWhatsAppKitchen } from '../utils/whatsapp';
+import {
+  formatPriceBRL,
+  openWhatsAppKitchen,
+  WHATSAPP_FORMATTED_DISPLAY,
+  WHATSAPP_PIX_KEY,
+} from '../utils/whatsapp';
 
 export const CheckoutModal: React.FC = () => {
   const {
@@ -362,10 +367,10 @@ export const CheckoutModal: React.FC = () => {
                   <span>Chave PIX da Pizzaria do Chefinho:</span>
                 </div>
                 <div className="mt-1 font-mono text-white select-all bg-black/40 px-2.5 py-1 rounded-lg inline-block">
-                  68992827744 (Telefone WhatsApp)
+                  {WHATSAPP_PIX_KEY} ({WHATSAPP_FORMATTED_DISPLAY})
                 </div>
                 <p className="mt-1 text-[11px] text-stone-300">
-                  Ao finalizar, a chave e comprovante poderão ser enviados direto para a cozinha no WhatsApp.
+                  Ao finalizar, envie seu pedido e comprovante direto para o WhatsApp {WHATSAPP_FORMATTED_DISPLAY}.
                 </p>
               </div>
             )}
@@ -545,7 +550,9 @@ export const CheckoutModal: React.FC = () => {
               onChange={(e) => setAutoOpenWhatsApp(e.target.checked)}
               className="w-4 h-4 rounded text-[#008C45] focus:ring-0"
             />
-            <span>Enviar automaticamente cópia estruturada para a cozinha no WhatsApp</span>
+            <span>
+              Enviar automaticamente pedido e comprovante para o WhatsApp ({WHATSAPP_FORMATTED_DISPLAY})
+            </span>
           </label>
         </form>
 

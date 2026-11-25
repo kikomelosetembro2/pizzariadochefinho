@@ -38,7 +38,11 @@ export interface FCMNotification {
   timestamp: string;
 }
 
+export type ThemeMode = 'dark' | 'light';
+
 interface AppContextType {
+  theme: ThemeMode;
+  toggleTheme: () => void;
   products: Product[];
   crustOptions: CrustOption[];
   extraIngredients: ExtraIngredient[];
@@ -109,6 +113,7 @@ const STORAGE_KEYS = {
   USERS: 'chefinho_users_v1',
   CURRENT_USER: 'chefinho_current_user_v1',
   CART: 'chefinho_cart_v1',
+  THEME: 'chefinho_theme_v1',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -197,6 +202,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | 'todas'>('todas');
+
+  // Theme Mode (Dark Charcoal vs Artisanal Pastel Light)
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+      return saved === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === 'light') {
+      root.classList.remove('dark');
+      root.classList.add('light-pastel');
+    } else {
+      root.classList.remove('light-pastel');
+      root.classList.add('dark');
+    }
+
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', theme === 'light' ? '#FDF6EC' : '#1F2421');
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEYS.THEME, theme);
+    } catch {}
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // FCM Cloud Messaging Notification State
   const [fcmNotification, setFcmNotification] = useState<FCMNotification | null>(null);
@@ -451,7 +490,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customer: {
         uid: currentUser?.uid || 'guest-user',
         name: currentUser?.name || 'Cliente Balcão',
-        phone: currentUser?.phone || '(68) 99282-7744',
+        phone: currentUser?.phone || '(68) 9935-8084',
         email: currentUser?.email || 'cliente@chefinho.com.br',
         address: params.orderType === 'delivery' ? currentUser?.address : undefined,
       },
@@ -596,6 +635,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        theme,
+        toggleTheme,
         products,
         crustOptions,
         extraIngredients,

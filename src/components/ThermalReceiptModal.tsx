@@ -12,7 +12,9 @@ import { useApp } from '../context/AppContext';
 import { Order } from '../types';
 import {
   formatPriceBRL,
-  openWhatsAppKitchen,
+  getWhatsAppPaymentProofUrl,
+  getWhatsAppReceiptUrl,
+  getWhatsAppSupportUrl,
   WHATSAPP_FORMATTED_DISPLAY,
 } from '../utils/whatsapp';
 
@@ -263,13 +265,25 @@ export const ThermalReceiptModal: React.FC = () => {
 
         {/* Action Buttons Below Ticket */}
         <div className="w-full max-w-[360px] mt-4 space-y-2">
-          <button
-            onClick={() => openWhatsAppKitchen(order)}
+          <a
+            href={getWhatsAppReceiptUrl(order)}
+            target="_blank"
+            rel="noopener noreferrer"
             className="w-full py-3 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition"
           >
             <MessageCircle className="w-4 h-4 fill-current" />
-            <span>Enviar Cópia para WhatsApp da Cozinha</span>
-          </button>
+            <span>Enviar Comanda e Comprovante ({WHATSAPP_FORMATTED_DISPLAY})</span>
+          </a>
+
+          <a
+            href={getWhatsAppPaymentProofUrl(order)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2.5 px-4 rounded-xl bg-[#008C45]/20 hover:bg-[#008C45]/30 border border-[#008C45]/40 text-[#FAF8F5] font-semibold text-xs flex items-center justify-center gap-2 transition"
+          >
+            <Receipt className="w-4 h-4 text-[#008C45]" />
+            <span>Enviar Comprovante PIX / Pagamento</span>
+          </a>
 
           <div className="flex gap-2">
             <button
@@ -288,6 +302,14 @@ export const ThermalReceiptModal: React.FC = () => {
               <span>Concluir Pedido</span>
             </button>
           </div>
+          <a
+            href={getWhatsAppSupportUrl(`Olá! Preciso de atendimento sobre meu Pedido #${order.orderNumber} na Pizzaria do Chefinho.`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-2 text-center text-[11px] font-semibold text-stone-300 hover:text-[#25D366] transition block"
+          >
+            Precisa de ajuda? Falar com Atendimento ({WHATSAPP_FORMATTED_DISPLAY})
+          </a>
         </div>
       </div>
     </div>

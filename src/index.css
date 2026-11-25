@@ -66,3 +66,233 @@ h1, h2, h3, h4, .font-display {
     color: black !important;
   }
 }
+
+/* ==========================================================================
+   ARTISANAL PIZZERIA PASTEL LIGHT MODE (html.light-pastel)
+   Palette: Farinha / Massa (#FDF6EC), Papel Manteiga (#FFFBF4),
+   Trigo Suave (#F5E9D8), Manjericão Pastel (#E6F4EC / #007A3D),
+   Tomate San Marzano Pastel (#FCE8EB / #C8102E), Espresso (#2B211B)
+   ========================================================================== */
+html.light-pastel body {
+  background-color: #FDF6EC;
+  color: #2B211B;
+}
+
+html.light-pastel ::-webkit-scrollbar-track {
+  background: #F5E9D8;
+}
+html.light-pastel ::-webkit-scrollbar-thumb {
+  background: #D6C1AA;
+}
+html.light-pastel ::-webkit-scrollbar-thumb:hover {
+  background: #C8102E;
+}
+
+/* Primary Canvas & Surfaces */
+html.light-pastel .bg-\[\#1F2421\] {
+  background-color: #FDF6EC;
+}
+html.light-pastel .bg-\[\#1F2421\]\/95 {
+  background-color: rgba(253, 246, 236, 0.94);
+}
+html.light-pastel .bg-\[\#171B19\],
+html.light-pastel .bg-\[\#161A18\] {
+  background-color: #F6EBDC;
+}
+html.light-pastel .bg-\[\#262C29\] {
+  background-color: #FFFBF4;
+}
+html.light-pastel .bg-\[\#2E3632\],
+html.light-pastel .bg-\[\#2E3531\],
+html.light-pastel .hover\:bg-\[\#262C29\]:hover,
+html.light-pastel .hover\:bg-\[\#2E3632\]:hover,
+html.light-pastel .hover\:bg-\[\#2E3531\]:hover {
+  background-color: #F3E5D3;
+}
+html.light-pastel .bg-\[\#1D221F\],
+html.light-pastel .bg-\[\#191E1B\] {
+  background-color: #EFE1CE;
+}
+
+/* Hero & Loyalty Pastel Gradients */
+html.light-pastel .bg-gradient-to-b.from-\[\#171B19\] {
+  background-image: linear-gradient(to bottom, #F8ECDC 0%, #FBF3E7 55%, #FDF6EC 100%);
+}
+html.light-pastel .bg-gradient-to-r.from-\[\#262C29\],
+html.light-pastel .bg-gradient-to-br.from-\[\#262C29\] {
+  background-image: linear-gradient(135deg, #EDF7F0 0%, #FBF1E3 100%);
+}
+html.light-pastel .from-\[\#1F2421\]:not(.hero-image-scrim) {
+  --tw-gradient-from: #FDF6EC;
+}
+
+/* Borders & Dividers */
+html.light-pastel .border-white\/5 {
+  border-color: rgba(138, 101, 68, 0.14);
+}
+html.light-pastel .border-white\/10 {
+  border-color: rgba(138, 101, 68, 0.22);
+}
+html.light-pastel .border-white\/15,
+html.light-pastel .border-white\/20,
+html.light-pastel .border-\[\#FAF8F5\]\/20 {
+  border-color: rgba(138, 101, 68, 0.28);
+}
+html.light-pastel .divide-white\/5 > :not(:last-child) {
+  border-color: rgba(138, 101, 68, 0.14);
+}
+
+/* Neutral Translucent Surfaces */
+html.light-pastel .bg-white\/5 {
+  background-color: rgba(138, 101, 68, 0.08);
+}
+html.light-pastel .bg-white\/10,
+html.light-pastel .hover\:bg-white\/10:hover {
+  background-color: rgba(138, 101, 68, 0.14);
+}
+html.light-pastel .bg-white\/20,
+html.light-pastel .hover\:bg-white\/20:hover,
+html.light-pastel .hover\:bg-white\/5:hover {
+  background-color: rgba(138, 101, 68, 0.20);
+}
+html.light-pastel .bg-white {
+  border: 1px solid rgba(138, 101, 68, 0.22);
+}
+html.light-pastel .bg-black\/20 {
+  background-color: #F5E9D8;
+}
+html.light-pastel .bg-black\/40 {
+  background-color: #EADBC8;
+}
+html.light-pastel .bg-black\/80,
+html.light-pastel .bg-black\/85 {
+  background-color: rgba(43, 33, 27, 0.58);
+}
+
+/* Typography Hierarchy */
+html.light-pastel .text-\[\#FAF8F5\],
+html.light-pastel .text-white {
+  color: #2B211B;
+}
+html.light-pastel .text-stone-200,
+html.light-pastel .text-stone-300 {
+  color: #4E4037;
+}
+html.light-pastel .text-stone-400,
+html.light-pastel .text-gray-400 {
+  color: #756458;
+}
+html.light-pastel .text-stone-500,
+html.light-pastel .text-stone-600 {
+  color: #9A8779;
+}
+html.light-pastel .hover\:text-white:hover {
+  color: #2B211B;
+}
+html.light-pastel .placeholder-stone-400::placeholder,
+html.light-pastel .placeholder-stone-500::placeholder {
+  color: #9A8779;
+}
+
+/* Artisanal Pastel Semantic Accents */
+html.light-pastel .text-\[\#008C45\] {
+  color: #007A3D;
+}
+html.light-pastel .text-\[\#25D366\] {
+  color: #15803D;
+}
+html.light-pastel .bg-amber-950\/30,
+html.light-pastel .bg-amber-950\/40 {
+  background-color: #FEF3C7;
+}
+html.light-pastel .text-amber-200,
+html.light-pastel .text-amber-300,
+html.light-pastel .text-amber-400 {
+  color: #9A5B13;
+}
+html.light-pastel .bg-red-950\/30,
+html.light-pastel .bg-red-950\/40,
+html.light-pastel .bg-rose-950,
+html.light-pastel .hover\:bg-red-950\/30:hover,
+html.light-pastel .hover\:bg-red-950\/40:hover {
+  background-color: #FCE8EB;
+}
+html.light-pastel .text-red-300,
+html.light-pastel .text-red-400,
+html.light-pastel .text-red-400\/80,
+html.light-pastel .text-rose-300 {
+  color: #B91C1C;
+}
+html.light-pastel .bg-emerald-950 {
+  background-color: #E6F4EC;
+}
+html.light-pastel .text-emerald-300,
+html.light-pastel .text-emerald-400 {
+  color: #047857;
+}
+
+/* Soft Warm Card Elevation in Light Mode */
+html.light-pastel .hover\:shadow-black\/50:hover {
+  --tw-shadow-color: rgba(138, 101, 68, 0.18);
+}
+
+/* Preserve crisp white ink on solid colored CTAs, badges, and dark overlays */
+html.light-pastel .bg-\[\#C8102E\],
+html.light-pastel .bg-\[\#C8102E\] *,
+html.light-pastel .bg-\[\#008C45\],
+html.light-pastel .bg-\[\#008C45\] *,
+html.light-pastel .bg-\[\#25D366\],
+html.light-pastel .bg-\[\#25D366\] *,
+html.light-pastel .bg-amber-500,
+html.light-pastel .bg-red-900,
+html.light-pastel .bg-black,
+html.light-pastel .bg-black\/60,
+html.light-pastel .bg-gradient-to-r.from-\[\#C8102E\],
+html.light-pastel .bg-gradient-to-r.from-\[\#C8102E\] *,
+html.light-pastel .group:hover .group-hover\:bg-\[\#008C45\].group-hover\:text-white {
+  color: #FFFFFF;
+}
+html.light-pastel .bg-\[\#C8102E\] .text-\[\#C8102E\] {
+  color: #C8102E;
+}
+html.light-pastel .bg-\[\#C8102E\] .bg-\[\#FAF8F5\] {
+  background-color: #FFFFFF;
+}
+html.light-pastel .bg-\[\#C8102E\] .text-white\/80 {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+/* Preserve dark scrim contrast over HeroBanner vintage artwork */
+html.light-pastel .hero-image-scrim {
+  background-image: linear-gradient(to top, rgba(31, 36, 33, 0.92), rgba(31, 36, 33, 0.58), transparent);
+}
+html.light-pastel .hero-image-scrim .text-\[\#FAF8F5\] {
+  color: #FAF8F5;
+}
+html.light-pastel .hero-image-scrim .text-\[\#008C45\] {
+  color: #4ADE80;
+}
+
+/* Preserve dark overlay bar inside ThermalReceiptModal backdrop */
+html.light-pastel .fixed.bg-black\/85 > div > .text-white,
+html.light-pastel .fixed.bg-black\/85 > div > .text-white button {
+  color: #FFFFFF;
+}
+html.light-pastel .fixed.bg-black\/85 > div > .text-white .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+html.light-pastel .fixed.bg-black\/85 > div > .text-white .bg-white\/10:hover {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Preserve ProductCard unavailable dark scrim */
+html.light-pastel .bg-black\/75 .text-red-400 {
+  color: #FCA5A5;
+}
+
+/* Preserve Italian tricolor center stripe crisp white */
+html.light-pastel .grid-cols-3 > .bg-\[\#FAF8F5\],
+html.light-pastel .flex > .bg-\[\#FAF8F5\] {
+  background-color: #FFFFFF;
+}
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Clock, Heart, MapPin, MessageCircle, Phone, Sliders } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { openWhatsAppDirectHelp, WHATSAPP_FORMATTED_DISPLAY } from '../utils/whatsapp';
+import { getWhatsAppSupportUrl, WHATSAPP_FORMATTED_DISPLAY } from '../utils/whatsapp';
 
 export const Footer: React.FC = () => {
   const { setActiveModal, isBusinessOpen, businessStatusText } = useApp();
@@ -78,13 +78,15 @@ export const Footer: React.FC = () => {
             <div className="space-y-1 text-xs">
               <div className="text-[#FAF8F5]">Bairro Cidade do Povo</div>
               <div className="text-stone-300">Rio Branco - Acre, AC</div>
-              <button
-                onClick={openWhatsAppDirectHelp}
-                className="mt-2 flex items-center gap-1.5 text-[#25D366] hover:underline font-bold"
+              <a
+                href={getWhatsAppSupportUrl()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-[#25D366] hover:underline font-bold"
               >
                 <Phone className="w-3.5 h-3.5" />
-                <span>{WHATSAPP_FORMATTED_DISPLAY}</span>
-              </button>
+                <span>Atendimento: {WHATSAPP_FORMATTED_DISPLAY}</span>
+              </a>
               <div className="pt-2">
                 <button
                   onClick={() => setActiveModal('admin')}

@@ -1,7 +1,8 @@
 import { Order } from '../types';
 
-export const WHATSAPP_PHONE_NUMBER = '5568992827744';
-export const WHATSAPP_FORMATTED_DISPLAY = '(68) 99282-7744';
+export const WHATSAPP_PHONE_NUMBER = '556899358084';
+export const WHATSAPP_FORMATTED_DISPLAY = '+55 68 9935-8084';
+export const WHATSAPP_PIX_KEY = '6899358084';
 
 export function formatPriceBRL(val: number): string {
   return val.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -26,7 +27,7 @@ export function buildKitchenWhatsAppMessage(order: Order): string {
     dinheiro: 'Dinheiro',
   };
 
-  let msg = `🍕 *NOVO PEDIDO - PIZZARIA DO CHEFINHO* 🍕\n`;
+  let msg = `🍕 *NOVO PEDIDO E COMPROVANTE - PIZZARIA DO CHEFINHO* 🍕\n`;
   msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `🧾 *Pedido:* #${order.orderNumber}\n`;
   msg += `📅 *Data/Hora:* ${dateFormatted} (Rio Branco)\n`;
@@ -101,19 +102,62 @@ export function buildKitchenWhatsAppMessage(order: Order): string {
   }
 
   msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-  msg += `✨ _Pedido gerado pelo Cardápio Digital da Pizzaria do Chefinho_\n`;
+  msg += `📎 _Comprovante/Comanda enviada pelo Cardápio Digital da Pizzaria do Chefinho_\n`;
 
   return msg;
 }
 
-export function openWhatsAppKitchen(order: Order) {
+export function buildPaymentProofWhatsAppMessage(order: Order): string {
+  const paymentLabels: Record<string, string> = {
+    pix: 'PIX',
+    cartao_credito: 'Cartão de Crédito',
+    cartao_debito: 'Cartão de Débito',
+    dinheiro: 'Dinheiro',
+  };
+
+  let msg = `🧾 *COMPROVANTE DE PAGAMENTO / PEDIDO #${order.orderNumber}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `👤 *Cliente:* ${order.customer.name}\n`;
+  msg += `📱 *Telefone:* ${order.customer.phone}\n`;
+  msg += `💳 *Pagamento:* ${paymentLabels[order.paymentMethod] || order.paymentMethod}\n`;
+  msg += `💰 *Valor Total:* ${formatPriceBRL(order.total)}\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `📎 Olá! Segue o comprovante referente ao meu pedido #${order.orderNumber} na *Pizzaria do Chefinho*.`;
+
+  return msg;
+}
+
+export function getWhatsAppSupportUrl(customText?: string): string {
+  const text =
+    customText ||
+    'Olá! Gostaria de falar com o atendimento da Pizzaria do Chefinho.';
+  return `https://wa.me/${WHATSAPP_PHONE_NUMBER}?text=${encodeURIComponent(text)}`;
+}
+
+export function getWhatsAppReceiptUrl(order: Order): string {
   const message = buildKitchenWhatsAppMessage(order);
-  const encoded = encodeURIComponent(message);
-  const url = `https://wa.me/${WHATSAPP_PHONE_NUMBER}?text=${encoded}`;
-  window.open(url, '_blank');
+  return `https://wa.me/${WHATSAPP_PHONE_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+export function getWhatsAppPaymentProofUrl(order: Order): string {
+  const message = buildPaymentProofWhatsAppMessage(order);
+  return `https://wa.me/${WHATSAPP_PHONE_NUMBER}?text=${encodeURIComponent(message)}`;
+}
+
+function triggerExternalWhatsAppLink(url: string) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+export function openWhatsAppKitchen(order: Order) {
+  triggerExternalWhatsAppLink(getWhatsAppReceiptUrl(order));
 }
 
 export function openWhatsAppDirectHelp() {
-  const text = encodeURIComponent('Olá Pizzaria do Chefinho! Gostaria de tirar uma dúvida sobre o cardápio.');
-  window.open(`https://wa.me/${WHATSAPP_PHONE_NUMBER}?text=${text}`, '_blank');
+  triggerExternalWhatsAppLink(getWhatsAppSupportUrl());
 }

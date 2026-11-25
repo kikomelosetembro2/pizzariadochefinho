@@ -4,20 +4,24 @@ import {
   Leaf,
   MapPin,
   MessageCircle,
+  Moon,
   Phone,
   Pizza,
   ShoppingBag,
   Sliders,
   Sparkles,
+  Sun,
   User,
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { formatPriceBRL, openWhatsAppDirectHelp, WHATSAPP_FORMATTED_DISPLAY } from '../utils/whatsapp';
+import { formatPriceBRL, getWhatsAppSupportUrl, WHATSAPP_FORMATTED_DISPLAY } from '../utils/whatsapp';
 import { PWAInstallButton } from './PWAInstallButton';
 
 export const Header: React.FC = () => {
   const {
+    theme,
+    toggleTheme,
     isBusinessOpen,
     businessStatusText,
     businessDetailText,
@@ -58,13 +62,15 @@ export const Header: React.FC = () => {
             </button>
           </div>
           <div className="flex items-center gap-4">
-            <button
-              onClick={openWhatsAppDirectHelp}
+            <a
+              href={getWhatsAppSupportUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1 text-[#008C45] hover:underline font-semibold"
             >
               <Phone className="w-3 h-3" />
-              <span>WhatsApp: {WHATSAPP_FORMATTED_DISPLAY}</span>
-            </button>
+              <span>Atendimento WhatsApp: {WHATSAPP_FORMATTED_DISPLAY}</span>
+            </a>
             <span className="text-stone-600">·</span>
             <button
               onClick={() => setActiveModal('admin')}
@@ -128,15 +134,20 @@ export const Header: React.FC = () => {
 
           {/* Action Zone: WhatsApp, PWA, User, Cart, Admin */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Quick WhatsApp Button */}
-            <button
-              onClick={openWhatsAppDirectHelp}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-[#008C45]/15 hover:bg-[#008C45]/25 text-[#008C45] border border-[#008C45]/30 text-xs font-semibold transition-colors shrink-0"
-              title="Fale no WhatsApp (68) 99282-7744"
+            {/* Quick WhatsApp Atendimento Button */}
+            <a
+              href={getWhatsAppSupportUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-[#25D366]/15 hover:bg-[#25D366]/25 text-[#25D366] border border-[#25D366]/40 text-xs font-bold transition-colors shrink-0"
+              title={`Atendimento WhatsApp ${WHATSAPP_FORMATTED_DISPLAY}`}
             >
               <MessageCircle className="w-4 h-4 fill-current" />
-              <span className="hidden md:inline">(68) 99282-7744</span>
-            </button>
+              <span>Atendimento</span>
+              <span className="hidden xl:inline text-[11px] font-semibold opacity-90">
+                · {WHATSAPP_FORMATTED_DISPLAY}
+              </span>
+            </a>
 
             {/* PWA Install Button */}
             <PWAInstallButton />
@@ -184,6 +195,27 @@ export const Header: React.FC = () => {
                 <span className="w-5 h-5 rounded-full bg-[#FAF8F5] text-[#C8102E] text-[11px] font-extrabold flex items-center justify-center shrink-0 shadow">
                   {cartCount}
                 </span>
+              )}
+            </button>
+
+            {/* Theme Toggle Button (Dark <-> Artisanal Pastel Light) */}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Alternar para modo claro pastel' : 'Alternar para modo escuro'}
+              title={theme === 'dark' ? 'Ativar Modo Claro Pastel Artesanal' : 'Ativar Modo Escuro'}
+              className="flex items-center gap-1.5 p-2 sm:px-2.5 sm:py-2 rounded-xl bg-[#262C29] hover:bg-[#2E3632] border border-white/10 text-stone-200 text-xs font-semibold transition-all active:scale-95 shrink-0"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-4 h-4 text-amber-300" />
+                  <span className="hidden md:inline">Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-4 h-4 text-[#C8102E]" />
+                  <span className="hidden md:inline">Escuro</span>
+                </>
               )}
             </button>
 
