@@ -296,3 +296,88 @@ html.light-pastel .flex > .bg-\[\#FAF8F5\] {
   background-color: #FFFFFF;
 }
 
+/* ==========================================================================
+   ITALIAN IDENTITY SKELETON LOADING (#008C45, #FAF8F5, #C8102E)
+   ========================================================================== */
+@keyframes italian-shimmer-sweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes italian-tricolor-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.skeleton-italian-surface {
+  background-color: #1D221F;
+  background-image: linear-gradient(
+    110deg,
+    rgba(29, 34, 31, 0) 20%,
+    rgba(0, 140, 69, 0.22) 38%,
+    rgba(250, 248, 245, 0.16) 50%,
+    rgba(200, 16, 46, 0.22) 62%,
+    rgba(29, 34, 31, 0) 80%
+  );
+  background-size: 220% 100%;
+  animation: italian-shimmer-sweep 1.65s ease-in-out infinite;
+}
+
+.skeleton-italian-line {
+  background-color: #2E3632;
+  background-image: linear-gradient(
+    105deg,
+    rgba(46, 54, 50, 0) 25%,
+    rgba(0, 140, 69, 0.28) 42%,
+    rgba(250, 248, 245, 0.22) 50%,
+    rgba(200, 16, 46, 0.28) 58%,
+    rgba(46, 54, 50, 0) 75%
+  );
+  background-size: 220% 100%;
+  animation: italian-shimmer-sweep 1.65s ease-in-out infinite;
+}
+
+.skeleton-tricolor-bar {
+  background: linear-gradient(90deg, #008C45 0%, #FAF8F5 50%, #C8102E 100%);
+  background-size: 200% 100%;
+  animation: italian-tricolor-flow 2.4s ease-in-out infinite;
+}
+
+html.light-pastel .skeleton-italian-surface {
+  background-color: #EFE1CE;
+  background-image: linear-gradient(
+    110deg,
+    rgba(239, 225, 206, 0) 20%,
+    rgba(0, 140, 69, 0.18) 38%,
+    rgba(255, 251, 244, 0.72) 50%,
+    rgba(200, 16, 46, 0.16) 62%,
+    rgba(239, 225, 206, 0) 80%
+  );
+  background-size: 220% 100%;
+}
+
+html.light-pastel .skeleton-italian-line {
+  background-color: #E5D4BE;
+  background-image: linear-gradient(
+    105deg,
+    rgba(229, 212, 190, 0) 25%,
+    rgba(0, 140, 69, 0.2) 42%,
+    rgba(250, 248, 245, 0.85) 50%,
+    rgba(200, 16, 46, 0.18) 58%,
+    rgba(229, 212, 190, 0) 75%
+  );
+  background-size: 220% 100%;
+}
+
+

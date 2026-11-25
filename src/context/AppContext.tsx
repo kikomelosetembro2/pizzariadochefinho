@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import {
   CRUST_OPTIONS,
   EXTRA_INGREDIENTS,
@@ -15,6 +15,7 @@ import {
   OrderStatus,
   OrderType,
   PaymentMethod,
+  PixProofValidation,
   Product,
   ProductCategory,
 } from '../types';
@@ -28,6 +29,8 @@ interface CreateOrderParams {
   notes?: string;
   useLoyaltyDiscount: boolean;
   useReferralDiscount: boolean;
+  friendReferralCode?: string;
+  pixProof?: PixProofValidation;
 }
 
 export interface FCMNotification {
@@ -463,13 +466,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     let discountLoyalty = 0;
     let discountReferral = 0;
+    let redeemedStoredReferralBonus = false;
+    let appliedFriendCode: string | undefined;
 
     if (params.useLoyaltyDiscount && currentUser?.loyaltyDiscountAvailable) {
       discountLoyalty = Number((cartSubtotal * 0.1).toFixed(2));
     }
 
-    if (params.useReferralDiscount && currentUser?.referralBonusAvailable) {
-      discountReferral = Number((cartSubtotal * 0.05).toFixed(2));
+    if (params.useReferralDiscount) {
+      if (currentUser?.referralBonusAvailable) {
+        discountReferral = Number((cartSubtotal * 0.05).toFixed(2));
+        redeemedStoredReferralBonus = true;
+      } else if (params.friendReferralCode) {
+        const cleanCode = params.friendReferralCode.trim().toUpperCase();
+        const referrer = registeredUsers.find(
+          (u) => u.referralCode.toUpperCase() === cleanCode && u.uid !== currentUser?.uid
+        );
+        if (referrer && !currentUser?.referredByCode) {
+          discountReferral = Number((cartSubtotal * 0.05).toFixed(2));
+          appliedFriendCode = cleanCode;
+        }
+      }
     }
 
     const deliveryFee = params.orderType === 'delivery' ? params.deliveryFee : 0;
@@ -502,6 +519,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       discountReferral,
       total: Number(finalTotal.toFixed(2)),
       paymentMethod: params.paymentMethod,
+      pixProof: params.paymentMethod === 'pix' ? params.pixProof : undefined,
       changeFor: params.paymentMethod === 'dinheiro' ? params.changeFor : undefined,
       changeReturn,
       status: 'pendente',
@@ -511,13 +529,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Save order
     setOrders((prev) => [newOrder, ...prev]);
 
-    // Update customer loyalty status
+    // Update customer loyalty status & referral rewards
     if (currentUser) {
       const newOrdersCount = currentUser.completedOrdersCount + 1;
       // Cycle resets when reaching 10 if used, or unlocks at 10
       let newLoyaltyAvailable = currentUser.loyaltyDiscountAvailable;
 
-      if (params.useLoyaltyDiscount) {
+      if (params.useLoyaltyDiscount && currentUser.loyaltyDiscountAvailable) {
         newLoyaltyAvailable = false;
       } else if (newOrdersCount % 10 === 0) {
         newLoyaltyAvailable = true;
@@ -527,15 +545,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...currentUser,
         completedOrdersCount: newOrdersCount,
         loyaltyDiscountAvailable: newLoyaltyAvailable,
-        referralBonusAvailable: params.useReferralDiscount
+        referralBonusAvailable: redeemedStoredReferralBonus
           ? false
           : currentUser.referralBonusAvailable,
+        referredByCode: appliedFriendCode || currentUser.referredByCode,
       };
 
       setCurrentUser(updatedUser);
       setRegisteredUsers((prev) =>
-        prev.map((u) => (u.uid === currentUser.uid ? updatedUser : u))
+        prev.map((u) => {
+          if (u.uid === currentUser.uid) return updatedUser;
+          if (appliedFriendCode && u.referralCode.toUpperCase() === appliedFriendCode) {
+            return { ...u, referralBonusAvailable: true };
+          }
+          return u;
+        })
       );
+    }
+
+    if (appliedFriendCode) {
+      try {
+        localStorage.removeItem('chefinho_referred_by');
+      } catch {}
     }
 
     // Clear cart and show thermal receipt modal
@@ -546,9 +577,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newOrder;
   };
 
-  const dismissFcmNotification = () => {
+  const dismissFcmNotification = useCallback(() => {
     setFcmNotification(null);
-  };
+  }, []);
 
   const requestNotificationPermission = async (): Promise<boolean> => {
     if (typeof window !== 'undefined' && 'Notification' in window) {

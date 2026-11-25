@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Check, Minus, Plus, ShoppingBag, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Check, Minus, Pizza, Plus, ShoppingBag, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { CrustOption, ExtraIngredient, ProductSize } from '../types';
 import { formatPriceBRL } from '../utils/whatsapp';
 
 export const ProductModal: React.FC = () => {
   const {
+    activeModal,
     selectedProductForModal,
     setSelectedProductForModal,
     setActiveModal,
@@ -21,15 +22,51 @@ export const ProductModal: React.FC = () => {
   const isCalzone = product?.category === 'calzones';
 
   // State
-  const [selectedSize, setSelectedSize] = useState<ProductSize>(isPizza ? 'G' : 'U');
+  const [selectedSize, setSelectedSize] = useState<ProductSize>('G');
   const [selectedCrust, setSelectedCrust] = useState<CrustOption>(
     crustOptions[0] || { id: 'sem_borda', name: 'Massa Tradicional (Sem Borda)', price: 0 }
   );
   const [selectedExtras, setSelectedExtras] = useState<ExtraIngredient[]>([]);
   const [notes, setNotes] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement | null>(null);
 
-  if (!product) return null;
+  // Reset customization state whenever a different product is opened
+  useEffect(() => {
+    if (!product) return;
+    const pizza =
+      product.category === 'pizzas_tradicionais' || product.category === 'pizzas_especiais';
+    setSelectedSize(pizza ? (product.priceLarge ? 'G' : 'M') : 'U');
+    setSelectedCrust(
+      crustOptions[0] || { id: 'sem_borda', name: 'Massa Tradicional (Sem Borda)', price: 0 }
+    );
+    setSelectedExtras([]);
+    setNotes('');
+    setQuantity(1);
+
+    if (imgRef.current && imgRef.current.complete && imgRef.current.naturalWidth > 0) {
+      setImgLoaded(true);
+    } else {
+      setImgLoaded(false);
+    }
+  }, [product?.id, activeModal, crustOptions]);
+
+  const handleClose = () => {
+    setSelectedProductForModal(null);
+    setActiveModal(null);
+  };
+
+  useEffect(() => {
+    if (activeModal !== 'product' || !product) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, product]);
+
+  if (activeModal !== 'product' || !product) return null;
 
   // Calculate Base Price
   const basePrice =
@@ -72,29 +109,56 @@ export const ProductModal: React.FC = () => {
     handleClose();
   };
 
-  const handleClose = () => {
-    setSelectedProductForModal(null);
-    setActiveModal(null);
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-        {/* Sticky Header with Close Button */}
+    <div
+      onClick={handleClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
+        {/* Sticky Header with Image & Italian Skeleton Loader */}
         <div className="relative aspect-[16/9] w-full shrink-0 bg-[#262C29] overflow-hidden">
+          {!imgLoaded && (
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 z-10 skeleton-italian-surface flex flex-col justify-between"
+            >
+              <div className="h-[3px] w-full skeleton-tricolor-bar" />
+              <div className="flex-1 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-full border-2 border-[#008C45]/60 border-t-[#C8102E] border-r-[#FAF8F5] animate-spin flex items-center justify-center">
+                  <Pizza className="w-5 h-5 text-[#FAF8F5] opacity-80" />
+                </div>
+              </div>
+            </div>
+          )}
+
           <img
+            ref={imgRef}
             src={product.image}
             alt={product.name}
             referrerPolicy="no-referrer"
+            onLoad={() => setImgLoaded(true)}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/images/hero_pizzaria_oven_1794456659172.jpg';
+              const target = e.target as HTMLImageElement;
+              if (!target.dataset.fallbackApplied) {
+                target.dataset.fallbackApplied = '1';
+                target.src = '/images/hero_pizzaria_oven_1794456659172.jpg';
+              } else {
+                setImgLoaded(true);
+              }
             }}
-            className="w-full h-full object-cover"
+            className={`w-full h-full object-cover transition-opacity duration-300 ${
+              imgLoaded ? 'opacity-100' : 'opacity-0'
+            }`}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#1F2421] via-transparent to-black/40" />
           <button
+            type="button"
             onClick={handleClose}
-            className="absolute top-3 right-3 p-2 rounded-full bg-black/60 text-white hover:bg-black transition"
+            aria-label="Fechar janela do produto"
+            className="absolute top-3 right-3 z-20 p-2 rounded-full bg-black/60 text-white hover:bg-black transition"
           >
             <X className="w-5 h-5" />
           </button>

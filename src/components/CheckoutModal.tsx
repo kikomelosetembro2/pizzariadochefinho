@@ -1,21 +1,37 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  AlertCircle,
+  AlertTriangle,
   Banknote,
+  Check,
   CheckCircle,
+  Clock,
+  Copy,
   CreditCard,
-  Flame,
+  FileText,
   Gift,
-  HelpCircle,
   Leaf,
   MapPin,
   QrCode,
+  RefreshCw,
+  ShieldCheck,
   Store,
+  Trash2,
   Truck,
+  Upload,
   X,
 } from 'lucide-react';
+import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
 import { OrderType, PaymentMethod } from '../types';
+import {
+  generatePixBrCode,
+  PixValidationOutcome,
+  registerUsedPixProof,
+  validatePixFileProof,
+  validatePixTextProof,
+} from '../utils/pix';
 import {
   formatPriceBRL,
   openWhatsAppKitchen,
@@ -54,7 +70,22 @@ export const CheckoutModal: React.FC = () => {
   const [referralFeedback, setReferralFeedback] = useState<string | null>(null);
   const [hasValidReferralFriend, setHasValidReferralFriend] = useState<boolean>(false);
 
-  if (activeModal !== 'checkout') return null;
+  // PIX QR Code Copia-e-Cola, Countdown Timer & Receipt Validator state
+  const PIX_PAYMENT_DURATION_SECONDS = 10 * 60; // 10 minutos
+  const [pixSessionRef, setPixSessionRef] = useState<string>(
+    () => `CHEF${Date.now().toString().slice(-8)}`
+  );
+  const [pixSecondsLeft, setPixSecondsLeft] = useState<number>(PIX_PAYMENT_DURATION_SECONDS);
+  const [pixQrDataUrl, setPixQrDataUrl] = useState<string>('');
+  const [copiedPixCode, setCopiedPixCode] = useState<'brcode' | 'key' | null>(null);
+  const [pixValidatorTab, setPixValidatorTab] = useState<'arquivo' | 'codigo'>('arquivo');
+  const [pixTextInput, setPixTextInput] = useState<string>('');
+  const [pixValidating, setPixValidating] = useState<boolean>(false);
+  const [pixValidation, setPixValidation] = useState<
+    (PixValidationOutcome & { previewUrl?: string }) | null
+  >(null);
+  const [pixSubmitError, setPixSubmitError] = useState<string | null>(null);
+  const pixFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const deliveryFee = orderType === 'delivery' ? 7.0 : 0.0;
 
@@ -74,6 +105,87 @@ export const CheckoutModal: React.FC = () => {
     cartSubtotal + deliveryFee - loyaltyDiscountVal - referralDiscountVal
   );
 
+  // Automatically build BACEN EMVCo BR Code ("PIX Copia e Cola") using WHATSAPP_PIX_KEY and order total
+  const pixBrCode = useMemo(() => {
+    return generatePixBrCode({
+      pixKey: WHATSAPP_PIX_KEY,
+      amount: finalTotal,
+      txId: pixSessionRef,
+    });
+  }, [finalTotal, pixSessionRef]);
+
+  // Countdown timer while PIX payment is active in Checkout
+  useEffect(() => {
+    if (activeModal !== 'checkout' || paymentMethod !== 'pix' || pixSecondsLeft <= 0) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setPixSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeModal, paymentMethod, pixSecondsLeft]);
+
+  // Render QR Code image automatically whenever PIX is selected or total changes
+  useEffect(() => {
+    if (activeModal !== 'checkout' || paymentMethod !== 'pix' || finalTotal <= 0) {
+      return;
+    }
+    let cancelled = false;
+    QRCode.toDataURL(pixBrCode, {
+      width: 220,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#1F2421',
+        light: '#FFFFFF',
+      },
+    })
+      .then((url) => {
+        if (!cancelled) setPixQrDataUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setPixQrDataUrl('');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeModal, paymentMethod, pixBrCode, finalTotal]);
+
+  // Cleanup any object URL preview when cleared or unmounted
+  useEffect(() => {
+    const currentPreview = pixValidation?.previewUrl;
+    return () => {
+      if (currentPreview) {
+        URL.revokeObjectURL(currentPreview);
+      }
+    };
+  }, [pixValidation?.previewUrl]);
+
+  // Sync loyalty/referral defaults and reset transient checkout state when opening checkout
+  useEffect(() => {
+    if (activeModal !== 'checkout') return;
+    setApplyLoyalty(Boolean(currentUser?.loyaltyDiscountAvailable));
+    setApplyReferral(Boolean(currentUser?.referralBonusAvailable));
+    setCashError(null);
+    setPixSubmitError(null);
+    setCashChangeFor('');
+    setOrderNotes('');
+    setPixValidation(null);
+    setPixTextInput('');
+    setHasValidReferralFriend(false);
+    setReferralFeedback(null);
+    setPixSessionRef(`CHEF${Date.now().toString().slice(-8)}`);
+    setPixSecondsLeft(PIX_PAYMENT_DURATION_SECONDS);
+    try {
+      const storedRef = localStorage.getItem('chefinho_referred_by');
+      setFriendReferralCode(storedRef && !currentUser?.referredByCode ? storedRef : '');
+    } catch {
+      setFriendReferralCode('');
+    }
+  }, [activeModal, currentUser?.uid, currentUser?.loyaltyDiscountAvailable, currentUser?.referralBonusAvailable, currentUser?.referredByCode]);
+
+  if (activeModal !== 'checkout') return null;
+
   // Cash change calculation
   const numericCashFor = parseFloat(cashChangeFor.replace(',', '.')) || 0;
   const changeReturnAmount =
@@ -84,6 +196,12 @@ export const CheckoutModal: React.FC = () => {
   const handleApplyFriendCode = () => {
     const clean = friendReferralCode.trim().toUpperCase();
     if (!clean) return;
+
+    if (currentUser?.referredByCode) {
+      setReferralFeedback('Você já utilizou um código de indicação anteriormente.');
+      setHasValidReferralFriend(false);
+      return;
+    }
 
     if (currentUser && currentUser.referralCode.toUpperCase() === clean) {
       setReferralFeedback('Você não pode usar seu próprio código de indicação.');
@@ -104,6 +222,53 @@ export const CheckoutModal: React.FC = () => {
     }
   };
 
+  const handleCopyPix = (value: string, type: 'brcode' | 'key') => {
+    navigator.clipboard.writeText(value);
+    setCopiedPixCode(type);
+    setTimeout(() => setCopiedPixCode(null), 2200);
+  };
+
+  const handleRegeneratePixCode = () => {
+    setPixSessionRef(`CHEF${Date.now().toString().slice(-8)}`);
+    setPixSecondsLeft(PIX_PAYMENT_DURATION_SECONDS);
+  };
+
+  const pixMinutes = Math.floor(pixSecondsLeft / 60);
+  const pixSeconds = pixSecondsLeft % 60;
+  const pixCountdownFormatted = `${String(pixMinutes).padStart(2, '0')}:${String(pixSeconds).padStart(2, '0')}`;
+  const pixCountdownPercent = Math.max(0, Math.min(100, (pixSecondsLeft / PIX_PAYMENT_DURATION_SECONDS) * 100));
+  const isPixExpiringSoon = pixSecondsLeft > 0 && pixSecondsLeft <= 120;
+  const isPixExpired = pixSecondsLeft === 0;
+
+  const handleClearPixProof = () => {
+    setPixValidation(null);
+    setPixTextInput('');
+    setPixSubmitError(null);
+    if (pixFileInputRef.current) {
+      pixFileInputRef.current.value = '';
+    }
+  };
+
+  const handlePixFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPixValidating(true);
+    setPixSubmitError(null);
+    const outcome = await validatePixFileProof(file, finalTotal);
+    setPixValidation(outcome);
+    setPixValidating(false);
+  };
+
+  const handleValidatePixText = (overrideText?: string) => {
+    const textToValidate = overrideText ?? pixTextInput;
+    setPixValidating(true);
+    setPixSubmitError(null);
+    const outcome = validatePixTextProof(textToValidate, finalTotal);
+    setPixValidation(outcome);
+    setPixValidating(false);
+  };
+
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -114,6 +279,14 @@ export const CheckoutModal: React.FC = () => {
 
     if (orderType === 'delivery' && !currentUser.address) {
       setActiveModal('auth');
+      return;
+    }
+
+    // Reject if user attached an explicitly invalid PIX proof without clearing/fixing it
+    if (paymentMethod === 'pix' && pixValidation && !pixValidation.isValid) {
+      setPixSubmitError(
+        'O comprovante PIX anexado não passou na validação. Envie um comprovante válido ou remova-o para enviar depois pelo WhatsApp.'
+      );
       return;
     }
 
@@ -128,17 +301,25 @@ export const CheckoutModal: React.FC = () => {
     }
 
     setCashError(null);
+    setPixSubmitError(null);
+
+    if (paymentMethod === 'pix' && pixValidation?.isValid && pixValidation.fingerprint) {
+      registerUsedPixProof(pixValidation.fingerprint);
+    }
 
     // Create order
     const created = createOrder({
       orderType,
       paymentMethod,
+      pixProof:
+        paymentMethod === 'pix' && pixValidation?.isValid ? pixValidation.proof : undefined,
       changeFor:
         paymentMethod === 'dinheiro' && numericCashFor > finalTotal ? numericCashFor : undefined,
       deliveryFee,
       notes: orderNotes.trim() || undefined,
       useLoyaltyDiscount: applyLoyalty,
       useReferralDiscount: applyReferral || hasValidReferralFriend,
+      friendReferralCode: hasValidReferralFriend ? friendReferralCode.trim().toUpperCase() : undefined,
     });
 
     try {
@@ -359,19 +540,328 @@ export const CheckoutModal: React.FC = () => {
               </button>
             </div>
 
-            {/* PIX instructions */}
+            {/* PIX QR Code Copia-e-Cola Automático + Contagem Regressiva + Validador */}
             {paymentMethod === 'pix' && (
-              <div className="p-3 rounded-xl bg-[#008C45]/10 border border-[#008C45]/30 text-xs text-[#008C45]">
-                <div className="font-bold flex items-center gap-1.5">
-                  <CheckCircle className="w-4 h-4 text-[#008C45]" />
-                  <span>Chave PIX da Pizzaria do Chefinho:</span>
+              <div className="p-4 rounded-xl bg-[#262C29] border border-[#008C45]/35 space-y-4">
+                {/* Header & Valor Exato */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#008C45]">
+                    <QrCode className="w-4 h-4 shrink-0" />
+                    <span>PIX Automático · QR Code & Copia-e-Cola</span>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-lg bg-[#008C45]/15 border border-[#008C45]/30 text-xs font-extrabold text-[#008C45] tabular-nums">
+                    Valor: {formatPriceBRL(finalTotal)}
+                  </span>
                 </div>
-                <div className="mt-1 font-mono text-white select-all bg-black/40 px-2.5 py-1 rounded-lg inline-block">
-                  {WHATSAPP_PIX_KEY} ({WHATSAPP_FORMATTED_DISPLAY})
+
+                {/* Visual Countdown Timer Bar */}
+                <div
+                  className={`p-3 rounded-xl border space-y-2 transition-colors ${
+                    isPixExpired
+                      ? 'bg-red-950/40 border-red-500/40'
+                      : isPixExpiringSoon
+                      ? 'bg-amber-950/30 border-amber-500/40'
+                      : 'bg-[#1F2421] border-white/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-1.5 font-semibold text-stone-300">
+                      <Clock
+                        className={`w-3.5 h-3.5 ${
+                          isPixExpired
+                            ? 'text-red-400'
+                            : isPixExpiringSoon
+                            ? 'text-amber-400 animate-pulse'
+                            : 'text-[#008C45]'
+                        }`}
+                      />
+                      <span>
+                        {isPixExpired
+                          ? 'Tempo do código PIX expirado'
+                          : 'Tempo restante para pagamento PIX:'}
+                      </span>
+                    </div>
+
+                    {isPixExpired ? (
+                      <button
+                        type="button"
+                        onClick={handleRegeneratePixCode}
+                        className="px-2.5 py-1 rounded-lg bg-[#C8102E] hover:bg-[#A90D26] text-white text-[11px] font-bold flex items-center gap-1 transition"
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        <span>Gerar Novo Código</span>
+                      </button>
+                    ) : (
+                      <span
+                        className={`font-mono font-extrabold text-sm tabular-nums ${
+                          isPixExpiringSoon ? 'text-amber-300' : 'text-[#008C45]'
+                        }`}
+                      >
+                        {pixCountdownFormatted}
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    role="progressbar"
+                    aria-valuenow={pixSecondsLeft}
+                    aria-valuemin={0}
+                    aria-valuemax={PIX_PAYMENT_DURATION_SECONDS}
+                    aria-label="Contagem regressiva para pagamento via PIX"
+                    className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden"
+                  >
+                    <div
+                      className={`h-full rounded-full transition-all duration-1000 ease-linear ${
+                        isPixExpired
+                          ? 'bg-red-500'
+                          : isPixExpiringSoon
+                          ? 'bg-amber-400'
+                          : 'bg-gradient-to-r from-[#008C45] to-emerald-400'
+                      }`}
+                      style={{ width: `${pixCountdownPercent}%` }}
+                    />
+                  </div>
                 </div>
-                <p className="mt-1 text-[11px] text-stone-300">
-                  Ao finalizar, envie seu pedido e comprovante direto para o WhatsApp {WHATSAPP_FORMATTED_DISPLAY}.
-                </p>
+
+                {/* QR Code + Key & Copia-e-Cola Grid */}
+                <div className={`flex flex-col sm:flex-row items-center gap-4 ${isPixExpired ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {/* Scannable QR Code Frame */}
+                  <div className="shrink-0 flex flex-col items-center">
+                    <div className="w-36 h-36 rounded-xl bg-white p-2 shadow-md flex items-center justify-center">
+                      {pixQrDataUrl ? (
+                        <img
+                          src={pixQrDataUrl}
+                          alt={`QR Code PIX de ${formatPriceBRL(finalTotal)}`}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <QrCode className="w-16 h-16 text-stone-400 animate-pulse" />
+                      )}
+                    </div>
+                    <span className="mt-1.5 text-[10px] text-stone-400 font-medium">
+                      Escaneie no app do banco
+                    </span>
+                  </div>
+
+                  {/* PIX Key & Copia-e-Cola Payload */}
+                  <div className="flex-1 w-full space-y-2.5 text-left">
+                    <div>
+                      <div className="text-[11px] font-semibold text-stone-400 mb-1">
+                        Código PIX Copia e Cola (com valor exato preenchido):
+                      </div>
+                      <div className="p-2 rounded-lg bg-[#1F2421] border border-white/10 font-mono text-[10px] text-stone-300 break-all max-h-16 overflow-y-auto select-all">
+                        {pixBrCode}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPix(pixBrCode, 'brcode')}
+                        className="mt-2 w-full py-2 px-3 rounded-lg bg-[#008C45] hover:bg-[#00753a] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow"
+                      >
+                        {copiedPixCode === 'brcode' ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            <span>Código Copiado!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4" />
+                            <span>Copiar Código</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5 text-[11px]">
+                      <div className="text-stone-400 truncate">
+                        Chave Celular:{' '}
+                        <strong className="text-[#FAF8F5] font-mono select-all">
+                          {WHATSAPP_PIX_KEY}
+                        </strong>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyPix(WHATSAPP_PIX_KEY, 'key')}
+                        className="px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white transition shrink-0"
+                      >
+                        {copiedPixCode === 'key' ? 'Copiada!' : 'Copiar Chave'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Validador de Comprovante PIX */}
+                <div className="pt-3 border-t border-white/10 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#FAF8F5]">
+                      <ShieldCheck className="w-4 h-4 text-[#008C45]" />
+                      <span>Validador de Comprovante PIX</span>
+                    </div>
+
+                    <div className="flex items-center rounded-lg bg-[#1F2421] p-0.5 border border-white/10 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setPixValidatorTab('arquivo')}
+                        className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                          pixValidatorTab === 'arquivo'
+                            ? 'bg-[#008C45] text-white'
+                            : 'text-stone-400 hover:text-white'
+                        }`}
+                      >
+                        Imagem / PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPixValidatorTab('codigo')}
+                        className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                          pixValidatorTab === 'codigo'
+                            ? 'bg-[#008C45] text-white'
+                            : 'text-stone-400 hover:text-white'
+                        }`}
+                      >
+                        Código E2E / Texto
+                      </button>
+                    </div>
+                  </div>
+
+                  {pixValidatorTab === 'arquivo' ? (
+                    <div className="space-y-2">
+                      <input
+                        ref={pixFileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,application/pdf"
+                        onChange={handlePixFileSelected}
+                        className="hidden"
+                        id="pix-proof-file-input"
+                      />
+                      <label
+                        htmlFor="pix-proof-file-input"
+                        className="flex flex-col sm:flex-row items-center justify-center gap-2.5 p-3.5 rounded-xl border border-dashed border-[#008C45]/50 bg-[#1F2421] hover:bg-[#2E3632] cursor-pointer transition text-center sm:text-left"
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-[#008C45]/15 text-[#008C45] flex items-center justify-center shrink-0">
+                          <Upload className="w-4 h-4" />
+                        </div>
+                        <div className="text-xs">
+                          <div className="font-bold text-[#FAF8F5]">
+                            {pixValidating
+                              ? 'Validando comprovante...'
+                              : 'Anexar comprovante PIX (Print PNG/JPG ou PDF)'}
+                          </div>
+                          <div className="text-[11px] text-stone-400">
+                            Verificação automática de integridade, formato e anti-duplicidade
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <textarea
+                        value={pixTextInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPixTextInput(val);
+                          if (/^E\d{8}\d{12}[A-Za-z0-9]{11}$/.test(val.trim().toUpperCase())) {
+                            handleValidatePixText(val);
+                          }
+                        }}
+                        rows={2}
+                        placeholder="Cole o ID da Transação PIX (ex: E18236120202611251032...) ou o texto do comprovante..."
+                        className="w-full rounded-xl bg-[#1F2421] border border-white/10 px-3 py-2 text-xs text-white placeholder-stone-500 focus:outline-none focus:border-[#008C45] font-mono"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleValidatePixText()}
+                        disabled={!pixTextInput.trim() || pixValidating}
+                        className="w-full py-2 px-3 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-40 text-xs font-bold text-white transition flex items-center justify-center gap-1.5"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-[#008C45]" />
+                        <span>Validar Código / Comprovante PIX</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Validation Result Feedback Box */}
+                  {pixValidation && (
+                    <div
+                      className={`p-3 rounded-xl border text-xs space-y-2 ${
+                        pixValidation.severity === 'validado'
+                          ? 'bg-[#008C45]/15 border-[#008C45]/40 text-[#008C45]'
+                          : pixValidation.severity === 'atencao'
+                          ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                          : 'bg-red-950/40 border-red-500/40 text-red-300'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 font-bold">
+                          {pixValidation.severity === 'validado' ? (
+                            <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#008C45]" />
+                          ) : pixValidation.severity === 'atencao' ? (
+                            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                          ) : (
+                            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+                          )}
+                          <span>{pixValidation.headline}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleClearPixProof}
+                          title="Remover comprovante"
+                          className="p-1 rounded hover:bg-white/10 text-stone-400 hover:text-white shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Thumbnail Preview if image uploaded */}
+                      {pixValidation.previewUrl && (
+                        <div className="flex items-center gap-3 p-2 rounded-lg bg-[#1F2421] border border-white/10">
+                          <img
+                            src={pixValidation.previewUrl}
+                            alt="Prévia do comprovante PIX"
+                            className="w-12 h-12 rounded object-cover shrink-0 border border-white/10"
+                          />
+                          <div className="text-[11px] text-stone-300 min-w-0">
+                            <div className="font-bold text-[#FAF8F5] truncate">
+                              {pixValidation.proof?.fileName}
+                            </div>
+                            <div className="text-stone-400">
+                              {pixValidation.proof?.fileSizeLabel}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {!pixValidation.previewUrl && pixValidation.proof?.fileName && (
+                        <div className="flex items-center gap-2 text-[11px] text-stone-300">
+                          <FileText className="w-4 h-4 text-[#008C45] shrink-0" />
+                          <span className="truncate font-semibold">
+                            {pixValidation.proof.fileName} ({pixValidation.proof.fileSizeLabel})
+                          </span>
+                        </div>
+                      )}
+
+                      {pixValidation.proof?.checks && pixValidation.proof.checks.length > 0 && (
+                        <ul className="space-y-1 text-[11px] text-stone-300 pt-1">
+                          {pixValidation.proof.checks.map((chk, idx) => (
+                            <li key={idx} className="flex items-center gap-1.5">
+                              <Check className="w-3 h-3 text-[#008C45] shrink-0" />
+                              <span>{chk}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {pixSubmitError && (
+                    <div className="p-2.5 rounded-lg bg-red-950/40 border border-red-500/30 text-xs text-red-300 font-medium">
+                      {pixSubmitError}
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-stone-400">
+                    Ao finalizar, sua comanda e o status da validação seguem direto para o WhatsApp {WHATSAPP_FORMATTED_DISPLAY}.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -601,7 +1091,7 @@ export const CheckoutModal: React.FC = () => {
             type="button"
             onClick={handleSubmitOrder}
             disabled={cart.length === 0}
-            className="w-full py-3.5 px-4 rounded-xl bg-[#C8102E] hover:bg-[#A90D26] text-white font-extrabold text-sm sm:text-base shadow-xl shadow-[#C8102E]/25 active:scale-[0.98] transition-all flex items-center justify-between"
+            className="w-full py-3.5 px-4 rounded-xl bg-[#C8102E] hover:bg-[#A90D26] disabled:opacity-50 disabled:cursor-not-allowed text-white font-extrabold text-sm sm:text-base shadow-xl shadow-[#C8102E]/25 active:scale-[0.98] transition-all flex items-center justify-between"
           >
             <span>Confirmar Pedido & Gerar Comanda</span>
             <span className="tabular-nums font-extrabold">{formatPriceBRL(finalTotal)}</span>

@@ -23,7 +23,15 @@ export const HeroBanner: React.FC = () => {
     setSelectedCategory,
   } = useApp();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [heroImgLoaded, setHeroImgLoaded] = useState(false);
   const searchWrapperRef = useRef<HTMLDivElement>(null);
+  const heroImgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (heroImgRef.current && heroImgRef.current.complete && heroImgRef.current.naturalWidth > 0) {
+      setHeroImgLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,14 +84,27 @@ export const HeroBanner: React.FC = () => {
           <div className="lg:col-span-7 space-y-5 text-left">
             {/* Ambient tag line with basil green */}
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-[#008C45] tracking-wide uppercase">
-              <Leaf className="w-4 h-4 text-[#008C45]" />
-              <span>Forno a Lenha Rústico & Fermentação Lenta Italiana 48h</span>
+              <Leaf className="w-4 h-4 text-[#008C45] shrink-0" />
+              <span>Forno a Lenha Rústico · Fermentação Lenta Italiana 48h</span>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-[#FAF8F5] font-display leading-[1.1] max-w-2xl">
-              A verdadeira pizza artesanal em <span className="text-[#C8102E]">Rio Branco</span>.
-            </h1>
+            {/* Main Brand & Headline */}
+            <div className="space-y-2.5 max-w-2xl">
+              <h1 className="font-display tracking-tight leading-[1.06]">
+                <span className="block text-3xl sm:text-5xl lg:text-6xl font-black text-[#FAF8F5]">
+                  Pizzaria do <span className="text-[#C8102E]">Chefinho</span>
+                </span>
+                <span className="mt-2 block text-lg sm:text-2xl lg:text-3xl font-bold text-stone-200 leading-snug">
+                  A verdadeira pizza artesanal em{' '}
+                  <span className="text-[#008C45]">Rio Branco</span>.
+                </span>
+              </h1>
+              <div className="h-[3px] w-28 rounded-full grid grid-cols-3 overflow-hidden">
+                <div className="bg-[#008C45]" />
+                <div className="bg-[#FAF8F5]" />
+                <div className="bg-[#C8102E]" />
+              </div>
+            </div>
 
             {/* Subtext */}
             <p className="text-sm sm:text-base text-stone-300 max-w-xl leading-relaxed">
@@ -251,12 +272,27 @@ export const HeroBanner: React.FC = () => {
                 <div className="flex-1 bg-[#C8102E]" />
               </div>
 
-              <div className="aspect-[16/10] sm:aspect-[4/3] w-full overflow-hidden">
+              <div className="relative aspect-[16/10] sm:aspect-[4/3] w-full overflow-hidden bg-[#1D221F]">
+                {!heroImgLoaded && (
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-0 z-10 skeleton-italian-surface flex items-center justify-center"
+                  >
+                    <div className="w-12 h-12 rounded-full border-2 border-[#008C45]/60 border-t-[#C8102E] border-r-[#FAF8F5] animate-spin flex items-center justify-center">
+                      <Pizza className="w-5 h-5 text-[#FAF8F5] opacity-85" />
+                    </div>
+                  </div>
+                )}
                 <img
+                  ref={heroImgRef}
                   src="/images/pizza_italia_vintage_1795068133486.jpg"
                   alt="Ilustração artística em estilo Itália vintage da pizza artesanal da Pizzaria do Chefinho"
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  onLoad={() => setHeroImgLoaded(true)}
+                  onError={() => setHeroImgLoaded(true)}
+                  className={`w-full h-full object-cover group-hover:scale-105 transition-all duration-500 ${
+                    heroImgLoaded ? 'opacity-100' : 'opacity-0'
+                  }`}
                 />
               </div>
 

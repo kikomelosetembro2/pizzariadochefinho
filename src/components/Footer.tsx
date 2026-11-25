@@ -100,25 +100,34 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] sm:text-[11px] text-stone-400 text-center sm:text-left">
-          <div className="space-y-0.5">
+        {/* Web Desenvolvedor por: Francisco Araujo (Kiko) - (68) 99282-7744 */}
+        <div
+          className="mt-10 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center sm:items-end justify-between gap-3 text-[10px] sm:text-[11px] text-stone-400 text-center sm:text-left"
+          data-developer="Web Desenvolvedor por: Francisco Araujo (Kiko) - (68) 99282-7744"
+        >
+          <div className="space-y-1">
             <div>
               © {new Date().getFullYear()} Pizzaria do Chefinho. Todos os direitos reservados. Rio Branco - AC.
             </div>
-            <div className="text-[10px] text-stone-500">
-              Web Desenvolvedor: <span className="text-stone-300 font-medium">Francisco Araujo (kiko)</span> ·{' '}
+            <p className="text-[10px] text-stone-500 tracking-wide">
+              Web Desenvolvedor por:{' '}
+              <span className="text-stone-400 font-medium">Francisco Araujo (Kiko)</span> -{' '}
               <a
                 href="tel:+5568992827744"
                 className="hover:text-[#008C45] transition-colors tabular-nums"
               >
                 (68) 99282-7744
-              </a>{' '}
-              · © {new Date().getFullYear()} Copyright
-            </div>
+              </a>
+            </p>
           </div>
-          <div className="flex items-center gap-1 text-[10px] sm:text-[11px]">
-            <span>Autêntica receita italiana ·</span>
-            <span className="text-[#008C45] font-semibold">Pizzaria do Chefinho</span>
+          <div className="flex flex-col items-center sm:items-end gap-0.5 text-[10px] sm:text-[11px]">
+            <div className="flex items-center gap-1">
+              <span>Autêntica receita italiana ·</span>
+              <span className="text-[#008C45] font-semibold">Pizzaria do Chefinho</span>
+            </div>
+            <span className="text-[10px] text-stone-500">
+              © {new Date().getFullYear()} Copyright
+            </span>
           </div>
         </div>
       </div>

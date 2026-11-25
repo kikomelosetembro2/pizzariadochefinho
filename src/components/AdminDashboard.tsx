@@ -101,59 +101,43 @@ export const AdminDashboard: React.FC = () => {
   const deliveryPercentage = totalRevenue > 0 ? (deliveryRevenue / totalRevenue) * 100 : 0;
   const retiradaPercentage = totalRevenue > 0 ? (retiradaRevenue / totalRevenue) * 100 : 0;
 
-  // Weekly Balance (Segunda a Domingo, highlighting Quinta a Domingo)
+  // Weekly Balance (Segunda a Domingo, highlighting Quinta a Domingo) computed dynamically from validOrders
   const weekDays = [
-    { name: 'Segunda', isOperating: false, short: 'Seg' },
-    { name: 'Terça', isOperating: false, short: 'Ter' },
-    { name: 'Quarta', isOperating: false, short: 'Qua' },
-    { name: 'Quinta', isOperating: true, short: 'Qui' },
-    { name: 'Sexta', isOperating: true, short: 'Sex' },
-    { name: 'Sábado', isOperating: true, short: 'Sáb' },
-    { name: 'Domingo', isOperating: true, short: 'Dom' },
+    { name: 'Segunda', isOperating: false, short: 'Seg', jsDay: 1 },
+    { name: 'Terça', isOperating: false, short: 'Ter', jsDay: 2 },
+    { name: 'Quarta', isOperating: false, short: 'Qua', jsDay: 3 },
+    { name: 'Quinta', isOperating: true, short: 'Qui', jsDay: 4 },
+    { name: 'Sexta', isOperating: true, short: 'Sex', jsDay: 5 },
+    { name: 'Sábado', isOperating: true, short: 'Sáb', jsDay: 6 },
+    { name: 'Domingo', isOperating: true, short: 'Dom', jsDay: 0 },
   ];
 
-  const weeklyData = weekDays.map((d, idx) => {
+  const weeklyData = weekDays.map((d) => {
     let dayDeliveryRev = 0;
     let dayRetiradaRev = 0;
     let dayDeliveryCount = 0;
     let dayRetiradaCount = 0;
 
-    if (d.short === 'Qui') {
-      dayDeliveryRev = 105.0;
-      dayDeliveryCount = 1;
-    } else if (d.short === 'Sex') {
-      dayRetiradaRev = 64.6;
-      dayRetiradaCount = 1;
-    } else if (d.short === 'Sáb') {
-      dayDeliveryRev = 105.0;
-      dayDeliveryCount = 1;
-    } else if (d.short === 'Dom') {
-      dayDeliveryRev = 97.0;
-      dayRetiradaRev = 88.2;
-      dayDeliveryCount = 1;
-      dayRetiradaCount = 1;
-    }
-
-    if (idx === 3 && orders.length > 5) {
-      const extraOrders = orders.slice(0, orders.length - 5);
-      extraOrders.forEach((eo) => {
-        if (eo.status !== 'cancelado') {
-          if (eo.orderType === 'delivery') {
-            dayDeliveryRev += eo.total;
-            dayDeliveryCount++;
-          } else {
-            dayRetiradaRev += eo.total;
-            dayRetiradaCount++;
-          }
+    validOrders.forEach((ord) => {
+      const rioBrancoDate = new Date(
+        new Date(ord.createdAt).toLocaleString('en-US', { timeZone: 'America/Rio_Branco' })
+      );
+      if (rioBrancoDate.getDay() === d.jsDay) {
+        if (ord.orderType === 'delivery') {
+          dayDeliveryRev += ord.total;
+          dayDeliveryCount++;
+        } else {
+          dayRetiradaRev += ord.total;
+          dayRetiradaCount++;
         }
-      });
-    }
+      }
+    });
 
-    const dayTotal = dayDeliveryRev + dayRetiradaRev;
+    const dayTotal = Number((dayDeliveryRev + dayRetiradaRev).toFixed(2));
     return {
       ...d,
-      deliveryRev: dayDeliveryRev,
-      retiradaRev: dayRetiradaRev,
+      deliveryRev: Number(dayDeliveryRev.toFixed(2)),
+      retiradaRev: Number(dayRetiradaRev.toFixed(2)),
       totalRev: dayTotal,
       deliveryCount: dayDeliveryCount,
       retiradaCount: dayRetiradaCount,
@@ -167,8 +151,11 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!newProdName.trim() || !newProdPrice) return;
 
-    const basePriceNum = parseFloat(newProdPrice.replace(',', '.')) || 0;
-    const largePriceNum = newProdPriceLarge ? parseFloat(newProdPriceLarge.replace(',', '.')) : undefined;
+    const basePriceNum = Math.max(0, parseFloat(newProdPrice.replace(',', '.')) || 0);
+    const parsedLarge = newProdPriceLarge ? parseFloat(newProdPriceLarge.replace(',', '.')) : NaN;
+    const isPizzaCat = newProdCat === 'pizzas_tradicionais' || newProdCat === 'pizzas_especiais';
+    const largePriceNum =
+      isPizzaCat && !isNaN(parsedLarge) && parsedLarge > 0 ? parsedLarge : undefined;
 
     addProduct({
       name: newProdName.trim(),
@@ -320,11 +307,11 @@ export const AdminDashboard: React.FC = () => {
                 {/* Orders Filter Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/5">
                   <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                    {['todos', 'pendente', 'preparando', 'em_entrega', 'concluido'].map((status) => (
+                    {['todos', 'pendente', 'preparando', 'em_entrega', 'pronto_retirada', 'concluido', 'cancelado'].map((status) => (
                       <button
                         key={status}
                         onClick={() => setOrderFilter(status)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition whitespace-nowrap ${
                           orderFilter === status
                             ? 'bg-[#008C45] text-white shadow'
                             : 'bg-white/5 text-stone-400 hover:text-white'
@@ -334,6 +321,8 @@ export const AdminDashboard: React.FC = () => {
                           ? 'Todos'
                           : status === 'em_entrega'
                           ? 'Saiu p/ Entrega'
+                          : status === 'pronto_retirada'
+                          ? 'Pronto Retirada'
                           : status.replace('_', ' ')}
                       </button>
                     ))}
@@ -404,6 +393,17 @@ export const AdminDashboard: React.FC = () => {
                               <div className="text-amber-300 font-bold mt-0.5">
                                 ↳ Levar Troco: {formatPriceBRL(ord.changeReturn || ord.changeFor - ord.total)}{' '}
                                 (Pago com {formatPriceBRL(ord.changeFor)})
+                              </div>
+                            )}
+                            {ord.paymentMethod === 'pix' && ord.pixProof && (
+                              <div className="text-emerald-400 font-bold mt-0.5">
+                                ↳ PIX {ord.pixProof.status === 'validado' ? 'Validado' : 'Anexado'}
+                                {ord.pixProof.bankName ? ` (${ord.pixProof.bankName})` : ''}
+                                {ord.pixProof.transactionId
+                                  ? ` · E2E ${ord.pixProof.transactionId.slice(0, 12)}...`
+                                  : ord.pixProof.fileName
+                                  ? ` · ${ord.pixProof.fileName}`
+                                  : ''}
                               </div>
                             )}
                           </div>

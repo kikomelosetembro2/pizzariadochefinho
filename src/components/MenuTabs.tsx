@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GlassWater, Leaf, Pizza, Search, Sparkles, Utensils, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ProductCategory } from '../types';
-import { ProductCard } from './ProductCard';
+import { ProductCard, ProductCardSkeleton } from './ProductCard';
 
 interface CategoryTabItem {
   id: ProductCategory | 'todas';
@@ -29,6 +29,19 @@ export const MenuTabs: React.FC = () => {
     setSearchTerm,
   } = useApp();
 
+  const [isLoadingGrid, setIsLoadingGrid] = useState<boolean>(true);
+  const isFirstMount = useRef<boolean>(true);
+
+  useEffect(() => {
+    const delay = isFirstMount.current ? 420 : 220;
+    isFirstMount.current = false;
+    setIsLoadingGrid(true);
+    const timer = setTimeout(() => {
+      setIsLoadingGrid(false);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [selectedCategory]);
+
   // Filter products by category and search
   const filteredProducts = products.filter((product) => {
     const matchesCategory =
@@ -48,7 +61,7 @@ export const MenuTabs: React.FC = () => {
       {/* Section Header & Search */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-white/5">
         <div className="text-left">
-          <span className="text-xs font-bold text-[#008C45] uppercase tracking-wider block flex items-center gap-1.5">
+          <span className="text-xs font-bold text-[#008C45] uppercase tracking-wider flex items-center gap-1.5">
             <Leaf className="w-3.5 h-3.5" />
             <span>Tradição & Receitas Artesanais</span>
           </span>
@@ -72,7 +85,9 @@ export const MenuTabs: React.FC = () => {
           />
           {searchTerm && (
             <button
+              type="button"
               onClick={() => setSearchTerm('')}
+              aria-label="Limpar busca"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white"
             >
               <X className="w-4 h-4" />
@@ -88,6 +103,7 @@ export const MenuTabs: React.FC = () => {
           return (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setSelectedCategory(tab.id)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all ${
                 isActive
@@ -104,12 +120,20 @@ export const MenuTabs: React.FC = () => {
 
       {/* Item Counter */}
       <div className="mt-4 flex items-center justify-between text-xs text-stone-400">
-        <span>
-          Mostrando <strong className="text-[#FAF8F5]">{filteredProducts.length}</strong>{' '}
-          {filteredProducts.length === 1 ? 'item' : 'itens'}
-        </span>
+        {isLoadingGrid ? (
+          <div className="flex items-center gap-2">
+            <span className="inline-flex h-2 w-8 rounded-full skeleton-tricolor-bar" />
+            <span>Preparando cardápio italiano...</span>
+          </div>
+        ) : (
+          <span>
+            Mostrando <strong className="text-[#FAF8F5]">{filteredProducts.length}</strong>{' '}
+            {filteredProducts.length === 1 ? 'item' : 'itens'}
+          </span>
+        )}
         {searchTerm && (
           <button
+            type="button"
             onClick={() => setSearchTerm('')}
             className="text-[#008C45] font-semibold hover:underline"
           >
@@ -118,8 +142,18 @@ export const MenuTabs: React.FC = () => {
         )}
       </div>
 
-      {/* Products Grid */}
-      {filteredProducts.length > 0 ? (
+      {/* Products Grid or Italian Skeleton Grid */}
+      {isLoadingGrid ? (
+        <div
+          aria-busy="true"
+          aria-label="Carregando itens do cardápio"
+          className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+        >
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <ProductCardSkeleton key={idx} />
+          ))}
+        </div>
+      ) : filteredProducts.length > 0 ? (
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -133,6 +167,7 @@ export const MenuTabs: React.FC = () => {
             Não encontramos nenhum produto correspondente a "{searchTerm}".
           </p>
           <button
+            type="button"
             onClick={() => {
               setSearchTerm('');
               setSelectedCategory('todas');

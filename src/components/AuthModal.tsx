@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle, Lock, MapPin, Phone, User, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
@@ -31,6 +31,39 @@ export const AuthModal: React.FC = () => {
     type: 'success' | 'info' | 'error';
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (activeModal !== 'auth') return;
+    setAlertFeedback(null);
+
+    if (currentUser) {
+      setGoogleAuthStep('fill_data');
+      setEmail(currentUser.email);
+      setName(currentUser.name);
+      setPhone(currentUser.phone);
+      setStreet(currentUser.address?.street || '');
+      setNumber(currentUser.address?.number || '');
+      setNeighborhood(currentUser.address?.neighborhood || '');
+      setComplement(currentUser.address?.complement || '');
+      setReferencePoint(currentUser.address?.referencePoint || '');
+      setReferredByCode(currentUser.referredByCode || '');
+    } else {
+      setGoogleAuthStep('pick_google');
+      setEmail('');
+      setName('');
+      setPhone('');
+      setStreet('');
+      setNumber('');
+      setNeighborhood('');
+      setComplement('');
+      setReferencePoint('');
+      try {
+        setReferredByCode(localStorage.getItem('chefinho_referred_by') || '');
+      } catch {
+        setReferredByCode('');
+      }
+    }
+  }, [activeModal, currentUser]);
 
   if (activeModal !== 'auth') return null;
 
@@ -79,10 +112,19 @@ export const AuthModal: React.FC = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim() || !phone.trim() || !street.trim() || !number.trim() || !neighborhood.trim()) {
+    if (!name.trim() || !phone.trim() || !street.trim() || !number.trim() || !neighborhood.trim() || !referencePoint.trim()) {
       setAlertFeedback({
         type: 'error',
         text: 'Por favor, preencha todos os campos obrigatórios para entrega.',
+      });
+      return;
+    }
+
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      setAlertFeedback({
+        type: 'error',
+        text: 'Digite um número de WhatsApp válido com DDD (ex: (68) 9XXXX-XXXX).',
       });
       return;
     }

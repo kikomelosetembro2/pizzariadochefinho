@@ -118,7 +118,19 @@ export const ThermalReceiptModal: React.FC = () => {
               </span>
             </div>
             <div className="text-[11px] text-gray-700">Data: {dateFormatted} (Rio Branco)</div>
-            <div className="text-[11px] text-gray-700">Status: PENDENTE COZINHA</div>
+            <div className="text-[11px] text-gray-700">
+              Status:{' '}
+              {
+                {
+                  pendente: 'PENDENTE COZINHA',
+                  preparando: 'EM PREPARO',
+                  em_entrega: 'SAIU PARA ENTREGA',
+                  pronto_retirada: 'PRONTO P/ RETIRADA',
+                  concluido: 'CONCLUÍDO',
+                  cancelado: 'CANCELADO',
+                }[order.status]
+              }
+            </div>
           </div>
 
           {/* Customer Info */}
@@ -239,6 +251,26 @@ export const ThermalReceiptModal: React.FC = () => {
                   <div className="italic">Troco: Não precisa de troco (valor exato)</div>
                 )}
               </>
+            )}
+
+            {order.paymentMethod === 'pix' && order.pixProof && (
+              <div className="pt-1 text-[10px] space-y-0.5">
+                <div className="flex justify-between font-bold">
+                  <span>COMPROVANTE PIX:</span>
+                  <span className="px-1 bg-black text-white uppercase">
+                    {order.pixProof.status === 'validado' ? 'VALIDADO' : 'ANEXADO'}
+                  </span>
+                </div>
+                {order.pixProof.bankName && (
+                  <div>Banco: {order.pixProof.bankName}</div>
+                )}
+                {order.pixProof.transactionId && (
+                  <div className="break-all">E2E: {order.pixProof.transactionId}</div>
+                )}
+                {order.pixProof.fileName && (
+                  <div className="truncate">Arq: {order.pixProof.fileName}</div>
+                )}
+              </div>
             )}
 
             {order.notes && (

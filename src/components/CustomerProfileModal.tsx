@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Bell,
   Check,
@@ -39,10 +39,20 @@ export const CustomerProfileModal: React.FC = () => {
     typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted'
   );
 
+  useEffect(() => {
+    if (activeModal === 'profile' && typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationEnabled(Notification.permission === 'granted');
+    }
+  }, [activeModal]);
+
   if (activeModal !== 'profile' || !currentUser) return null;
 
   // Filter orders of this customer
-  const myOrders = orders.filter((o) => o.customer.email === currentUser.email);
+  const myOrders = orders.filter(
+    (o) =>
+      o.customer.email.toLowerCase() === currentUser.email.toLowerCase() ||
+      o.customer.uid === currentUser.uid
+  );
 
   // Loyalty calculations
   const progress10 = currentUser.completedOrdersCount % 10;
@@ -68,12 +78,9 @@ export const CustomerProfileModal: React.FC = () => {
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  const handleShareWhatsAppReferral = () => {
-    const text = encodeURIComponent(
-      `🍕 Ei! Peça uma pizza artesanal no forno a lenha na Pizzaria do Chefinho! Use meu código *${currentUser.referralCode}* e nós dois ganhamos *5% de desconto*! Acesse o cardápio: ${referralUrl}`
-    );
-    window.open(`https://wa.me/?text=${text}`, '_blank');
-  };
+  const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
+    `🍕 Ei! Peça uma pizza artesanal no forno a lenha na Pizzaria do Chefinho! Use meu código *${currentUser.referralCode}* e nós dois ganhamos *5% de desconto*! Acesse o cardápio: ${referralUrl}`
+  )}`;
 
   const handleEnableNotifications = async () => {
     const granted = await requestNotificationPermission();
@@ -330,13 +337,15 @@ export const CustomerProfileModal: React.FC = () => {
                   <span>{copiedLink ? 'Copiado!' : 'Copiar'}</span>
                 </button>
 
-                <button
-                  onClick={handleShareWhatsAppReferral}
+                <a
+                  href={whatsappShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex-1 sm:flex-none px-3.5 py-2.5 rounded-xl bg-[#008C45] hover:bg-[#00753a] text-xs font-bold text-white flex items-center justify-center gap-1.5 shadow transition"
                 >
                   <MessageCircle className="w-4 h-4 fill-current" />
                   <span>WhatsApp</span>
-                </button>
+                </a>
               </div>
             </div>
           </div>

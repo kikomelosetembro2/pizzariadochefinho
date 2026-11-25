@@ -82,6 +82,19 @@ export interface CustomerUser {
   createdAt: string;
 }
 
+export interface PixProofValidation {
+  status: 'validado' | 'atencao' | 'pendente';
+  method: 'arquivo' | 'e2e_texto';
+  transactionId?: string;
+  bankName?: string;
+  fileName?: string;
+  fileSizeLabel?: string;
+  detectedAmount?: number;
+  amountMatches?: boolean;
+  checks: string[];
+  validatedAt: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: number;
@@ -101,6 +114,7 @@ export interface Order {
   discountReferral: number; // 5% discount value
   total: number;
   paymentMethod: PaymentMethod;
+  pixProof?: PixProofValidation;
   changeFor?: number; // Valor entregue em dinheiro para troco
   changeReturn?: number; // Quanto o entregador leva de troco
   status: OrderStatus;

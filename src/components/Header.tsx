@@ -84,52 +84,56 @@ export const Header: React.FC = () => {
         {/* Main Navigation Bar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between gap-3">
           {/* Brand & Identity */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <button
+              type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex items-center gap-3 text-left focus:outline-none group"
+              className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-[#008C45]/50 shadow-lg bg-[#262C29] shrink-0 group focus:outline-none"
+              title="Pizzaria do Chefinho — Voltar ao topo"
             >
-              <div className="relative w-10 h-10 sm:w-12 sm:h-12 rounded-xl overflow-hidden border border-[#008C45]/40 shadow-lg bg-[#262C29] shrink-0">
-                <img
-                  src="/images/chefinho_artisan_logo_1794456662442.jpg"
-                  alt="Pizzaria do Chefinho"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg sm:text-2xl font-extrabold tracking-tight text-[#FAF8F5] font-display">
-                    Pizzaria do Chefinho
-                  </span>
-                  <Leaf className="w-4 h-4 text-[#008C45] hidden sm:inline" />
-                </div>
-                <div className="flex items-center gap-2 text-[11px] sm:text-xs">
-                  {/* Status Indicator Button */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowHoursModal(true);
-                    }}
-                    className={`inline-flex items-center gap-1 font-semibold transition-colors ${
-                      isBusinessOpen ? 'text-[#008C45]' : 'text-amber-400'
-                    }`}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isBusinessOpen ? 'bg-[#008C45]' : 'bg-amber-500'
-                      }`}
-                    />
-                    <span>{businessStatusText}</span>
-                  </button>
-                  <span className="text-stone-600 hidden sm:inline">·</span>
-                  <span className="text-stone-300 hidden sm:inline truncate max-w-[200px]">
-                    Cidade do Povo, Rio Branco
-                  </span>
-                </div>
-              </div>
+              <img
+                src="/images/chefinho_artisan_logo_1794456662442.jpg"
+                alt="Pizzaria do Chefinho"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/images/hero_pizzaria_oven_1794456659172.jpg';
+                }}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+              />
             </button>
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="flex items-center gap-1.5 sm:gap-2 text-left focus:outline-none group"
+              >
+                <span className="text-[15px] sm:text-xl lg:text-2xl font-black tracking-tight text-[#FAF8F5] font-display leading-tight truncate">
+                  Pizzaria do <span className="text-[#C8102E]">Chefinho</span>
+                </span>
+                <Leaf className="w-4 h-4 text-[#008C45] hidden sm:inline shrink-0" />
+              </button>
+              <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs mt-0.5">
+                {/* Status Indicator Button */}
+                <button
+                  type="button"
+                  onClick={() => setShowHoursModal(true)}
+                  className={`inline-flex items-center gap-1 font-semibold transition-colors shrink-0 ${
+                    isBusinessOpen ? 'text-[#008C45]' : 'text-amber-400'
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isBusinessOpen ? 'bg-[#008C45]' : 'bg-amber-500'
+                    }`}
+                  />
+                  <span>{businessStatusText}</span>
+                </button>
+                <span className="text-stone-600 hidden sm:inline">·</span>
+                <span className="text-stone-300 hidden sm:inline truncate max-w-[200px]">
+                  Cidade do Povo, Rio Branco
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Action Zone: WhatsApp, PWA, User, Cart, Admin */}
@@ -209,12 +213,12 @@ export const Header: React.FC = () => {
               {theme === 'dark' ? (
                 <>
                   <Sun className="w-4 h-4 text-amber-300" />
-                  <span className="hidden md:inline">Claro</span>
+                  <span className="hidden lg:inline">Claro</span>
                 </>
               ) : (
                 <>
                   <Moon className="w-4 h-4 text-[#C8102E]" />
-                  <span className="hidden md:inline">Escuro</span>
+                  <span className="hidden lg:inline">Escuro</span>
                 </>
               )}
             </button>

@@ -101,6 +101,25 @@ export function buildKitchenWhatsAppMessage(order: Order): string {
     }
   }
 
+  if (order.paymentMethod === 'pix' && order.pixProof) {
+    const statusLabel =
+      order.pixProof.status === 'validado'
+        ? '✅ VALIDADO NO CHECKOUT'
+        : order.pixProof.status === 'atencao'
+        ? '⚠️ CONFERIR COMPROVANTE'
+        : '⏳ AGUARDANDO ENVIO';
+    msg += `• *Status PIX:* ${statusLabel}\n`;
+    if (order.pixProof.transactionId) {
+      msg += `• *ID Transação (E2E):* ${order.pixProof.transactionId}\n`;
+    }
+    if (order.pixProof.bankName) {
+      msg += `• *Banco Emissor:* ${order.pixProof.bankName}\n`;
+    }
+    if (order.pixProof.fileName) {
+      msg += `• *Arquivo Anexado:* ${order.pixProof.fileName}\n`;
+    }
+  }
+
   msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `📎 _Comprovante/Comanda enviada pelo Cardápio Digital da Pizzaria do Chefinho_\n`;
 
@@ -121,6 +140,12 @@ export function buildPaymentProofWhatsAppMessage(order: Order): string {
   msg += `📱 *Telefone:* ${order.customer.phone}\n`;
   msg += `💳 *Pagamento:* ${paymentLabels[order.paymentMethod] || order.paymentMethod}\n`;
   msg += `💰 *Valor Total:* ${formatPriceBRL(order.total)}\n`;
+  if (order.paymentMethod === 'pix' && order.pixProof) {
+    msg += `✅ *Validação:* ${order.pixProof.status === 'validado' ? 'Comprovante validado no checkout' : 'Comprovante anexado'}\n`;
+    if (order.pixProof.transactionId) {
+      msg += `🔑 *E2E:* ${order.pixProof.transactionId}\n`;
+    }
+  }
   msg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
   msg += `📎 Olá! Segue o comprovante referente ao meu pedido #${order.orderNumber} na *Pizzaria do Chefinho*.`;
 
