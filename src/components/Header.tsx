@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Clock,
   Leaf,
@@ -34,6 +34,15 @@ export const Header: React.FC = () => {
   } = useApp();
 
   const [showHoursModal, setShowHoursModal] = useState(false);
+
+  useEffect(() => {
+    if (!showHoursModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowHoursModal(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showHoursModal]);
 
   return (
     <>
@@ -252,8 +261,14 @@ export const Header: React.FC = () => {
 
       {/* Business Hours & Testing Modal */}
       {showHoursModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md rounded-2xl bg-[#1F2421] border border-white/10 p-6 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-150">
+        <div
+          onClick={() => setShowHoursModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl bg-[#1F2421] border border-white/10 p-6 shadow-2xl text-left animate-in fade-in zoom-in-95 duration-150"
+          >
             <div className="flex items-center justify-between pb-3 border-b border-white/10">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-[#008C45]" />

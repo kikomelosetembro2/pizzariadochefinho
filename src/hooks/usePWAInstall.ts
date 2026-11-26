@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -35,9 +36,11 @@ export function usePWAInstall() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Register service worker if supported
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    // Register Workbox service worker with automatic update on new Vercel deployments
+    try {
+      registerSW({ immediate: true });
+    } catch {
+      // Ignore registration failure in unsupported contexts
     }
 
     return () => {

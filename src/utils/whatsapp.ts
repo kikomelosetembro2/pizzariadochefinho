@@ -95,7 +95,7 @@ export function buildKitchenWhatsAppMessage(order: Order): string {
   if (order.paymentMethod === 'dinheiro') {
     if (order.changeFor && order.changeFor > order.total) {
       msg += `• *Troco para:* ${formatPriceBRL(order.changeFor)}\n`;
-      msg += `• *LEVAR DE TROCO:* *${formatPriceBRL(order.changeReturn || order.changeFor - order.total)}*\n`;
+      msg += `• *LEVAR DE TROCO:* *${formatPriceBRL(order.changeReturn ?? (order.changeFor - order.total))}*\n`;
     } else {
       msg += `• *Troco:* Não necessita de troco (valor exato)\n`;
     }

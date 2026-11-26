@@ -180,6 +180,13 @@ export const HeroBanner: React.FC = () => {
                                 src={item.image}
                                 alt={item.name}
                                 referrerPolicy="no-referrer"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  if (!target.dataset.fallbackApplied) {
+                                    target.dataset.fallbackApplied = '1';
+                                    target.src = '/images/hero_pizzaria_oven_1794456659172.jpg';
+                                  }
+                                }}
                                 className="w-10 h-10 rounded-lg object-cover bg-[#262C29] shrink-0"
                               />
                               <div className="min-w-0">

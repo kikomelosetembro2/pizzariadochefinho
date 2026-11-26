@@ -177,12 +177,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // Current Logged In Customer
+  // Current Logged In Customer (preserves explicit logout as 'null' in localStorage)
   const [currentUser, setCurrentUser] = useState<CustomerUser | null>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (saved) return JSON.parse(saved);
-      // Pre-authenticate demo customer (user-demo-1) for immediate friendly test experience
+      if (saved !== null) return JSON.parse(saved);
+      // Pre-authenticate demo customer (user-demo-1) on very first visit
       return INITIAL_CUSTOMERS[0];
     } catch {
       return INITIAL_CUSTOMERS[0];
@@ -293,11 +293,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     try {
-      if (currentUser) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-      }
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
     } catch {}
   }, [currentUser]);
 
@@ -309,16 +305,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Cart calculations
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const cartSubtotal = cart.reduce((acc, item) => acc + item.totalPrice, 0);
+  const cartSubtotal = Number(
+    cart.reduce((acc, item) => acc + item.totalPrice, 0).toFixed(2)
+  );
 
   const addToCart = (itemData: Omit<CartItem, 'cartItemId' | 'totalPrice'>) => {
-    const itemTotal = itemData.unitPrice * itemData.quantity;
-    const newItem: CartItem = {
-      ...itemData,
-      cartItemId: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      totalPrice: itemTotal,
-    };
-    setCart((prev) => [...prev, newItem]);
+    const safeUnitPrice = Math.max(0, Number(itemData.unitPrice) || 0);
+    const safeQuantity = Math.max(1, Math.floor(Number(itemData.quantity) || 1));
+    const normalizedNotes = (itemData.notes || '').trim();
+    const extrasKey = (itemData.extras || [])
+      .map((e) => e.id)
+      .sort()
+      .join(',');
+    const crustKey = itemData.crust?.id || '';
+
+    setCart((prev) => {
+      const existingIdx = prev.findIndex((existing) => {
+        const existingExtrasKey = (existing.extras || [])
+          .map((e) => e.id)
+          .sort()
+          .join(',');
+        return (
+          existing.productId === itemData.productId &&
+          (existing.size || 'U') === (itemData.size || 'U') &&
+          (existing.crust?.id || '') === crustKey &&
+          existingExtrasKey === extrasKey &&
+          (existing.notes || '').trim() === normalizedNotes &&
+          existing.unitPrice === safeUnitPrice
+        );
+      });
+
+      if (existingIdx >= 0) {
+        return prev.map((existing, idx) => {
+          if (idx !== existingIdx) return existing;
+          const nextQty = existing.quantity + safeQuantity;
+          return {
+            ...existing,
+            quantity: nextQty,
+            totalPrice: Number((safeUnitPrice * nextQty).toFixed(2)),
+          };
+        });
+      }
+
+      const newItem: CartItem = {
+        ...itemData,
+        notes: normalizedNotes || undefined,
+        unitPrice: safeUnitPrice,
+        quantity: safeQuantity,
+        cartItemId: `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+        totalPrice: Number((safeUnitPrice * safeQuantity).toFixed(2)),
+      };
+      return [...prev, newItem];
+    });
   };
 
   const removeFromCart = (cartItemId: string) => {
@@ -365,13 +403,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }) => {
     // Normalization
     const cleanPhone = data.phone.trim();
+    const cleanPhoneDigits = cleanPhone.replace(/\D/g, '');
     const cleanEmail = data.email.trim().toLowerCase();
 
-    // Duplicate Check: Email or Phone
+    // Duplicate Check: Email or Phone (only match non-empty values)
     const existingUser = registeredUsers.find(
       (u) =>
-        u.email.toLowerCase() === cleanEmail ||
-        u.phone.replace(/\D/g, '') === cleanPhone.replace(/\D/g, '')
+        (cleanEmail.length > 0 && u.email.toLowerCase() === cleanEmail) ||
+        (cleanPhoneDigits.length >= 10 && u.phone.replace(/\D/g, '') === cleanPhoneDigits)
     );
 
     if (existingUser) {
@@ -595,13 +634,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
     const targetOrder = orders.find((o) => o.id === orderId);
+    if (!targetOrder || targetOrder.status === newStatus) return;
+
+    const oldStatus = targetOrder.status;
 
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     );
 
+    // Sync customer loyalty count when cancelling or uncancelling an order
+    const wasCancelled = oldStatus === 'cancelado';
+    const willCancel = newStatus === 'cancelado';
+    if (wasCancelled !== willCancel) {
+      const delta = willCancel ? -1 : 1;
+      const syncCustomer = (user: CustomerUser): CustomerUser => {
+        if (
+          user.uid !== targetOrder.customer.uid &&
+          user.email.toLowerCase() !== targetOrder.customer.email.toLowerCase()
+        ) {
+          return user;
+        }
+        const nextCount = Math.max(0, user.completedOrdersCount + delta);
+        let nextLoyalty = user.loyaltyDiscountAvailable;
+        if (willCancel) {
+          if (targetOrder.discountLoyalty > 0) {
+            nextLoyalty = true;
+          } else if (user.completedOrdersCount > 0 && user.completedOrdersCount % 10 === 0) {
+            nextLoyalty = false;
+          }
+        } else {
+          if (targetOrder.discountLoyalty > 0) {
+            nextLoyalty = false;
+          } else if (nextCount > 0 && nextCount % 10 === 0) {
+            nextLoyalty = true;
+          }
+        }
+        return {
+          ...user,
+          completedOrdersCount: nextCount,
+          loyaltyDiscountAvailable: nextLoyalty,
+        };
+      };
+
+      setRegisteredUsers((prev) => prev.map(syncCustomer));
+      setCurrentUser((prev) => (prev ? syncCustomer(prev) : prev));
+    }
+
     // FCM Notification Trigger: When status changes to 'em_entrega' (Saiu para Entrega)
-    if (newStatus === 'em_entrega' && targetOrder) {
+    if (newStatus === 'em_entrega') {
       const title = `🛵 Saiu para Entrega! Pedido #${targetOrder.orderNumber}`;
       const destination = targetOrder.customer.address?.street
         ? `${targetOrder.customer.address.street}, Nº ${targetOrder.customer.address.number} - ${targetOrder.customer.address.neighborhood}`
@@ -652,14 +732,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateCrustPrice = (id: string, price: number) => {
+    const safePrice = Math.max(0, Number(price) || 0);
     setCrustOptions((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, price } : c))
+      prev.map((c) => (c.id === id ? { ...c, price: safePrice } : c))
     );
   };
 
   const updateExtraPrice = (id: string, price: number) => {
+    const safePrice = Math.max(0, Number(price) || 0);
     setExtraIngredients((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, price } : e))
+      prev.map((e) => (e.id === id ? { ...e, price: safePrice } : e))
     );
   };
 

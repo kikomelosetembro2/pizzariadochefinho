@@ -25,6 +25,7 @@ import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
 import { useApp } from '../context/AppContext';
 import { OrderType, PaymentMethod } from '../types';
+import { copyTextToClipboard } from '../utils/clipboard';
 import {
   generatePixBrCode,
   PixValidationOutcome,
@@ -127,7 +128,9 @@ export const CheckoutModal: React.FC = () => {
 
   // Render QR Code image automatically whenever PIX is selected or total changes
   useEffect(() => {
-    if (activeModal !== 'checkout' || paymentMethod !== 'pix' || finalTotal <= 0) {
+    if (activeModal !== 'checkout' || paymentMethod !== 'pix') return;
+    if (finalTotal <= 0) {
+      setPixQrDataUrl('');
       return;
     }
     let cancelled = false;
@@ -172,17 +175,47 @@ export const CheckoutModal: React.FC = () => {
     setOrderNotes('');
     setPixValidation(null);
     setPixTextInput('');
-    setHasValidReferralFriend(false);
-    setReferralFeedback(null);
     setPixSessionRef(`CHEF${Date.now().toString().slice(-8)}`);
     setPixSecondsLeft(PIX_PAYMENT_DURATION_SECONDS);
+
+    let initialFriendCode = '';
+    let autoValidFriend = false;
+    let autoFeedback: string | null = null;
     try {
-      const storedRef = localStorage.getItem('chefinho_referred_by');
-      setFriendReferralCode(storedRef && !currentUser?.referredByCode ? storedRef : '');
-    } catch {
-      setFriendReferralCode('');
-    }
-  }, [activeModal, currentUser?.uid, currentUser?.loyaltyDiscountAvailable, currentUser?.referralBonusAvailable, currentUser?.referredByCode]);
+      const storedRef = localStorage.getItem('chefinho_referred_by')?.trim().toUpperCase() || '';
+      if (storedRef && !currentUser?.referredByCode && !currentUser?.referralBonusAvailable) {
+        initialFriendCode = storedRef;
+        const referrer = registeredUsers.find(
+          (u) => u.referralCode.toUpperCase() === storedRef && u.uid !== currentUser?.uid
+        );
+        if (referrer) {
+          autoValidFriend = true;
+          autoFeedback = `Código de indicação de ${referrer.name} aplicado automaticamente (5% OFF)!`;
+        }
+      }
+    } catch {}
+
+    setFriendReferralCode(initialFriendCode);
+    setHasValidReferralFriend(autoValidFriend);
+    setReferralFeedback(autoFeedback);
+  }, [
+    activeModal,
+    currentUser?.uid,
+    currentUser?.loyaltyDiscountAvailable,
+    currentUser?.referralBonusAvailable,
+    currentUser?.referredByCode,
+    registeredUsers,
+  ]);
+
+  // Escape key to return to cart
+  useEffect(() => {
+    if (activeModal !== 'checkout') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveModal('cart');
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, setActiveModal]);
 
   if (activeModal !== 'checkout') return null;
 
@@ -222,15 +255,18 @@ export const CheckoutModal: React.FC = () => {
     }
   };
 
-  const handleCopyPix = (value: string, type: 'brcode' | 'key') => {
-    navigator.clipboard.writeText(value);
-    setCopiedPixCode(type);
-    setTimeout(() => setCopiedPixCode(null), 2200);
+  const handleCopyPix = async (value: string, type: 'brcode' | 'key') => {
+    const ok = await copyTextToClipboard(value);
+    if (ok) {
+      setCopiedPixCode(type);
+      setTimeout(() => setCopiedPixCode(null), 2200);
+    }
   };
 
   const handleRegeneratePixCode = () => {
     setPixSessionRef(`CHEF${Date.now().toString().slice(-8)}`);
     setPixSecondsLeft(PIX_PAYMENT_DURATION_SECONDS);
+    setPixSubmitError(null);
   };
 
   const pixMinutes = Math.floor(pixSecondsLeft / 60);
@@ -272,6 +308,11 @@ export const CheckoutModal: React.FC = () => {
   const handleSubmitOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (cart.length === 0) {
+      setActiveModal('cart');
+      return;
+    }
+
     if (!currentUser) {
       setActiveModal('auth');
       return;
@@ -279,6 +320,14 @@ export const CheckoutModal: React.FC = () => {
 
     if (orderType === 'delivery' && !currentUser.address) {
       setActiveModal('auth');
+      return;
+    }
+
+    // Reject if PIX countdown expired before attaching a valid proof
+    if (paymentMethod === 'pix' && isPixExpired && !pixValidation?.isValid) {
+      setPixSubmitError(
+        'O tempo do código PIX expirou. Clique em "Gerar Novo Código" acima para atualizar antes de confirmar.'
+      );
       return;
     }
 
@@ -334,8 +383,14 @@ export const CheckoutModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      onClick={() => setActiveModal('cart')}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Subtle Italian 3px Tricolor Header Accent */}
         <div className="h-[3px] w-full grid grid-cols-3">
           <div className="bg-[#008C45]" />
@@ -880,10 +935,13 @@ export const CheckoutModal: React.FC = () => {
                   <span className="text-sm font-bold text-stone-400">R$</span>
                   <input
                     type="number"
+                    min="0"
                     step="any"
                     value={cashChangeFor}
                     onChange={(e) => {
-                      setCashChangeFor(e.target.value);
+                      const val = e.target.value;
+                      if (val.startsWith('-')) return;
+                      setCashChangeFor(val);
                       setCashError(null);
                     }}
                     placeholder={`Valor entregue (Total: ${finalTotal.toFixed(2)})`}

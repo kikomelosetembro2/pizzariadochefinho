@@ -21,6 +21,10 @@ export default defineConfig(() => {
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,jpg,jpeg,webp,webmanifest}'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          navigateFallback: '/index.html',
         },
         manifest: {
           id: '/',
@@ -30,8 +34,10 @@ export default defineConfig(() => {
           theme_color: '#1F2421',
           background_color: '#1F2421',
           display: 'standalone',
+          orientation: 'portrait',
           start_url: '/',
           scope: '/',
+          categories: ['food', 'shopping'],
           icons: [
             {
               src: '/icon.svg',
@@ -49,6 +55,18 @@ export default defineConfig(() => {
         },
       }),
     ],
+    build: {
+      rolldownOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules/react')) return 'vendor-react';
+            if (id.includes('node_modules/qrcode')) return 'vendor-qrcode';
+            if (id.includes('node_modules/lucide-react')) return 'vendor-icons';
+            if (id.includes('node_modules/canvas-confetti')) return 'vendor-effects';
+          },
+        },
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

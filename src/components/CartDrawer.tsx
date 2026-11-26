@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatPriceBRL } from '../utils/whatsapp';
@@ -15,6 +15,15 @@ export const CartDrawer: React.FC = () => {
     clearCart,
     currentUser,
   } = useApp();
+
+  useEffect(() => {
+    if (activeModal !== 'cart') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveModal(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, setActiveModal]);
 
   if (activeModal !== 'cart') return null;
 

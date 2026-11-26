@@ -65,6 +65,15 @@ export const AuthModal: React.FC = () => {
     }
   }, [activeModal, currentUser]);
 
+  useEffect(() => {
+    if (activeModal !== 'auth') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveModal(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, setActiveModal]);
+
   if (activeModal !== 'auth') return null;
 
   const handlePhoneChange = (val: string) => {
@@ -83,11 +92,21 @@ export const AuthModal: React.FC = () => {
   };
 
   const handleSimulateGoogleLogin = (chosenEmail: string, chosenName: string) => {
-    setEmail(chosenEmail);
+    const normalizedEmail = chosenEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setAlertFeedback({
+        type: 'error',
+        text: 'Digite um endereço de e-mail válido (ex: seunome@gmail.com) para continuar.',
+      });
+      return;
+    }
+
+    setAlertFeedback(null);
+    setEmail(normalizedEmail);
     setName(chosenName);
 
     const existing = registeredUsers.find(
-      (u) => u.email.toLowerCase() === chosenEmail.toLowerCase()
+      (u) => u.email.toLowerCase() === normalizedEmail
     );
 
     if (existing) {
@@ -99,6 +118,9 @@ export const AuthModal: React.FC = () => {
         setNeighborhood(existing.address.neighborhood);
         setComplement(existing.address.complement || '');
         setReferencePoint(existing.address.referencePoint);
+      }
+      if (existing.referredByCode) {
+        setReferredByCode(existing.referredByCode);
       }
       setAlertFeedback({
         type: 'info',
@@ -159,8 +181,14 @@ export const AuthModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-lg rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      onClick={() => setActiveModal(null)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Subtle Italian 3px Tricolor Header Accent */}
         <div className="h-[3px] w-full grid grid-cols-3">
           <div className="bg-[#008C45]" />

@@ -345,11 +345,14 @@ export async function validatePixFileProof(
   file: File,
   expectedTotal: number
 ): Promise<PixValidationOutcome & { previewUrl?: string }> {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-  const isImage = file.type.startsWith('image/');
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+  const lowerName = file.name.toLowerCase();
+  const isPdf = file.type === 'application/pdf' || lowerName.endsWith('.pdf');
+  const isImage =
+    file.type.startsWith('image/') ||
+    /\.(png|jpe?g|webp)$/i.test(lowerName);
 
-  if (!allowedTypes.includes(file.type) && !isPdf) {
+  if (!allowedTypes.includes(file.type) && !isPdf && !isImage) {
     return {
       isValid: false,
       severity: 'invalido',
@@ -448,6 +451,11 @@ export async function validatePixFileProof(
     amountMatches = Math.abs(detectedAmount - expectedTotal) <= 0.05;
     if (amountMatches) {
       checks.push(`Valor conferido: R$ ${detectedAmount.toFixed(2).replace('.', ',')}`);
+    } else {
+      severity = 'atencao';
+      checks.push(
+        `Valor encontrado (R$ ${detectedAmount.toFixed(2).replace('.', ',')}) difere do total (R$ ${expectedTotal.toFixed(2).replace('.', ',')})`
+      );
     }
   }
 

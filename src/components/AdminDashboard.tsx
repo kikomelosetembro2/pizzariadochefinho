@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   AlertTriangle,
   ArrowUpDown,
@@ -25,7 +25,16 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { OrderStatus, ProductCategory, Product } from '../types';
+import { ORDER_STATUS_LABELS } from '../utils/orderStatus';
 import { formatPriceBRL } from '../utils/whatsapp';
+
+const PRESET_PRODUCT_IMAGES = [
+  { label: 'Pizza Calabresa', url: '/images/pizza_calabresa_special_1794456660537.jpg' },
+  { label: 'Pizza Forno a Lenha', url: '/images/hero_pizzaria_oven_1794456659172.jpg' },
+  { label: 'Esfiha Fechada', url: '/images/esfiha_fechada_1794456661893.jpg' },
+  { label: 'Calzone Artesanal', url: '/images/calzone_recheado_1794456660864.jpg' },
+  { label: 'Bebida / Logo Chefinho', url: '/images/chefinho_artisan_logo_1794456662442.jpg' },
+];
 
 export const AdminDashboard: React.FC = () => {
   const {
@@ -46,8 +55,14 @@ export const AdminDashboard: React.FC = () => {
     registeredUsers,
   } = useApp();
 
-  // Authentication state
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
+  // Authentication state (locked by default for production safety; unlocked per browser session)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return sessionStorage.getItem('chefinho_admin_auth') === '1';
+    } catch {
+      return false;
+    }
+  });
   const [adminPasswordInput, setAdminPasswordInput] = useState<string>('');
   const [authError, setAuthError] = useState<string | null>(null);
 
@@ -59,6 +74,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Product CRUD states
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState<boolean>(false);
   const [productSearch, setProductSearch] = useState<string>('');
   const [newProdName, setNewProdName] = useState('');
@@ -66,6 +82,16 @@ export const AdminDashboard: React.FC = () => {
   const [newProdDesc, setNewProdDesc] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('');
   const [newProdPriceLarge, setNewProdPriceLarge] = useState('');
+  const [newProdImage, setNewProdImage] = useState('/images/pizza_calabresa_special_1794456660537.jpg');
+
+  useEffect(() => {
+    if (activeModal !== 'admin') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveModal(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, setActiveModal]);
 
   if (activeModal !== 'admin') return null;
 
@@ -74,9 +100,22 @@ export const AdminDashboard: React.FC = () => {
     if (adminPasswordInput === 'admin123' || adminPasswordInput === 'chefinho') {
       setIsAuthenticated(true);
       setAuthError(null);
+      setAdminPasswordInput('');
+      try {
+        sessionStorage.setItem('chefinho_admin_auth', '1');
+      } catch {}
     } else {
       setAuthError('Senha incorreta. A senha padrão de teste é "admin123".');
     }
+  };
+
+  const handleAdminLock = () => {
+    setIsAuthenticated(false);
+    setAdminPasswordInput('');
+    setAuthError(null);
+    try {
+      sessionStorage.removeItem('chefinho_admin_auth');
+    } catch {}
   };
 
   // Filter orders
@@ -151,7 +190,7 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     if (!newProdName.trim() || !newProdPrice) return;
 
-    const basePriceNum = Math.max(0, parseFloat(newProdPrice.replace(',', '.')) || 0);
+    const basePriceNum = Math.max(0.01, parseFloat(newProdPrice.replace(',', '.')) || 0);
     const parsedLarge = newProdPriceLarge ? parseFloat(newProdPriceLarge.replace(',', '.')) : NaN;
     const isPizzaCat = newProdCat === 'pizzas_tradicionais' || newProdCat === 'pizzas_especiais';
     const largePriceNum =
@@ -161,9 +200,9 @@ export const AdminDashboard: React.FC = () => {
       name: newProdName.trim(),
       category: newProdCat,
       description: newProdDesc.trim() || 'Receita italiana da casa preparada artesanalmente.',
-      price: basePriceNum,
-      priceLarge: largePriceNum,
-      image: '/images/pizza_calabresa_special_1794456660537.jpg',
+      price: Number(basePriceNum.toFixed(2)),
+      priceLarge: largePriceNum ? Number(largePriceNum.toFixed(2)) : undefined,
+      image: newProdImage || '/images/pizza_calabresa_special_1794456660537.jpg',
       available: true,
     });
 
@@ -172,18 +211,39 @@ export const AdminDashboard: React.FC = () => {
     setNewProdDesc('');
     setNewProdPrice('');
     setNewProdPriceLarge('');
+    setNewProdImage('/images/pizza_calabresa_special_1794456660537.jpg');
   };
 
   const handleSaveEditProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct) return;
-    updateProduct(editingProduct);
+    if (!editingProduct || !editingProduct.name.trim()) return;
+    const isPizzaCat =
+      editingProduct.category === 'pizzas_tradicionais' ||
+      editingProduct.category === 'pizzas_especiais';
+    updateProduct({
+      ...editingProduct,
+      name: editingProduct.name.trim(),
+      description:
+        editingProduct.description.trim() || 'Receita italiana da casa preparada artesanalmente.',
+      price: Math.max(0.01, Number(editingProduct.price) || 0),
+      priceLarge:
+        isPizzaCat && editingProduct.priceLarge && editingProduct.priceLarge > 0
+          ? Number(editingProduct.priceLarge)
+          : undefined,
+      image: editingProduct.image || '/images/pizza_calabresa_special_1794456660537.jpg',
+    });
     setEditingProduct(null);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 overflow-y-auto">
-      <div className="relative w-full max-w-5xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-4 max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      onClick={() => setActiveModal(null)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-3 sm:p-6 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-5xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-4 max-h-[94vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Subtle Italian 3px Tricolor Header Accent */}
         <div className="h-[3px] w-full grid grid-cols-3">
           <div className="bg-[#008C45]" />
@@ -210,7 +270,7 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center gap-2">
             {isAuthenticated && (
               <button
-                onClick={() => setIsAuthenticated(false)}
+                onClick={handleAdminLock}
                 className="text-xs text-stone-400 hover:text-white flex items-center gap-1 p-1.5 rounded-lg hover:bg-white/5 transition"
                 title="Bloquear Painel"
               >
@@ -449,11 +509,13 @@ export const AdminDashboard: React.FC = () => {
                           <span className="text-xs text-stone-400">
                             Status Atual:{' '}
                             <strong className="text-white uppercase font-bold">
-                              {ord.status === 'em_entrega' ? 'Saiu para Entrega (FCM)' : ord.status}
+                              {ord.status === 'em_entrega'
+                                ? 'Saiu para Entrega (FCM)'
+                                : ORDER_STATUS_LABELS[ord.status] || ord.status}
                             </strong>
                           </span>
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex flex-wrap items-center gap-1.5">
                             <button
                               onClick={() => updateOrderStatus(ord.id, 'preparando')}
                               className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
@@ -498,9 +560,13 @@ export const AdminDashboard: React.FC = () => {
 
                             <button
                               onClick={() => updateOrderStatus(ord.id, 'cancelado')}
-                              className="px-2 py-1 rounded-lg text-xs font-semibold text-red-400/80 hover:text-red-400 hover:bg-red-950/30 transition"
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                                ord.status === 'cancelado'
+                                  ? 'bg-red-900 text-white'
+                                  : 'text-red-400/80 hover:text-red-400 hover:bg-red-950/30'
+                              }`}
                             >
-                              Cancelar
+                              {ord.status === 'cancelado' ? 'Cancelado' : 'Cancelar'}
                             </button>
                           </div>
                         </div>
@@ -601,6 +667,7 @@ export const AdminDashboard: React.FC = () => {
                         </label>
                         <input
                           type="number"
+                          min="0.01"
                           step="0.01"
                           required
                           value={newProdPrice}
@@ -616,6 +683,7 @@ export const AdminDashboard: React.FC = () => {
                         </label>
                         <input
                           type="number"
+                          min="0"
                           step="0.01"
                           value={newProdPriceLarge}
                           onChange={(e) => setNewProdPriceLarge(e.target.value)}
@@ -623,6 +691,21 @@ export const AdminDashboard: React.FC = () => {
                           className="w-full px-3 py-2 rounded-lg bg-[#1F2421] border border-white/10 text-xs text-white"
                         />
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] text-stone-400">Imagem do Cardápio</label>
+                      <select
+                        value={newProdImage}
+                        onChange={(e) => setNewProdImage(e.target.value)}
+                        className="w-full px-3 py-2 rounded-lg bg-[#1F2421] border border-white/10 text-xs text-white"
+                      >
+                        {PRESET_PRODUCT_IMAGES.map((img) => (
+                          <option key={img.url} value={img.url}>
+                            {img.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="flex justify-end gap-2 pt-2">
@@ -664,9 +747,10 @@ export const AdminDashboard: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[11px] text-stone-400">Nome</label>
+                        <label className="text-[11px] text-stone-400">Nome *</label>
                         <input
                           type="text"
+                          required
                           value={editingProduct.name}
                           onChange={(e) =>
                             setEditingProduct({ ...editingProduct, name: e.target.value })
@@ -676,39 +760,110 @@ export const AdminDashboard: React.FC = () => {
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] text-stone-400">Preço Principal / M (R$)</label>
+                        <label className="text-[11px] text-stone-400">Categoria</label>
+                        <select
+                          value={editingProduct.category}
+                          onChange={(e) =>
+                            setEditingProduct({
+                              ...editingProduct,
+                              category: e.target.value as ProductCategory,
+                            })
+                          }
+                          className="w-full px-3 py-2 rounded-lg bg-[#1F2421] border border-white/10 text-xs text-white"
+                        >
+                          <option value="pizzas_tradicionais">Pizzas Tradicionais</option>
+                          <option value="pizzas_especiais">Pizzas Especiais</option>
+                          <option value="esfihas_fechadas">Esfihas Fechadas</option>
+                          <option value="calzones">Calzones</option>
+                          <option value="sucos">Sucos</option>
+                          <option value="refrigerantes">Refrigerantes</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-[11px] text-stone-400">Preço Principal / M (R$) *</label>
                         <input
                           type="number"
+                          min="0.01"
                           step="0.01"
+                          required
                           value={editingProduct.price}
                           onChange={(e) =>
                             setEditingProduct({
                               ...editingProduct,
-                              price: parseFloat(e.target.value) || 0,
+                              price: Math.max(0, parseFloat(e.target.value) || 0),
                             })
                           }
                           className="w-full px-3 py-2 rounded-lg bg-[#1F2421] border border-white/10 text-xs text-white"
                         />
                       </div>
+
+                      {(editingProduct.category === 'pizzas_tradicionais' ||
+                        editingProduct.category === 'pizzas_especiais') && (
+                        <div className="space-y-1">
+                          <label className="text-[11px] text-stone-400">Preço Tamanho G (R$)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editingProduct.priceLarge ?? ''}
+                            onChange={(e) => {
+                              const parsed = parseFloat(e.target.value);
+                              setEditingProduct({
+                                ...editingProduct,
+                                priceLarge: !isNaN(parsed) && parsed > 0 ? parsed : undefined,
+                              });
+                            }}
+                            placeholder="Opcional para Pizza G"
+                            className="w-full px-3 py-2 rounded-lg bg-[#1F2421] border border-white/10 text-xs text-white"
+                          />
+                        </div>
+                      )}
                     </div>
 
-                    {editingProduct.priceLarge !== undefined && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1">
-                        <label className="text-[11px] text-stone-400">Preço Tamanho G (R$)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={editingProduct.priceLarge}
-                          onChange={(e) =>
-                            setEditingProduct({
-                              ...editingProduct,
-                              priceLarge: parseFloat(e.target.value) || 0,
-                            })
+                        <label className="text-[11px] text-stone-400">Imagem</label>
+                        <select
+                          value={
+                            PRESET_PRODUCT_IMAGES.some((p) => p.url === editingProduct.image)
+                              ? editingProduct.image
+                              : ''
                           }
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setEditingProduct({ ...editingProduct, image: e.target.value });
+                            }
+                          }}
                           className="w-full px-3 py-2 rounded-lg bg-[#1F2421] border border-white/10 text-xs text-white"
-                        />
+                        >
+                          {!PRESET_PRODUCT_IMAGES.some((p) => p.url === editingProduct.image) && (
+                            <option value="">Imagem personalizada</option>
+                          )}
+                          {PRESET_PRODUCT_IMAGES.map((img) => (
+                            <option key={img.url} value={img.url}>
+                              {img.label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
-                    )}
+
+                      <div className="flex items-end pb-1">
+                        <label className="flex items-center gap-2 text-xs text-stone-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(editingProduct.isPopular)}
+                            onChange={(e) =>
+                              setEditingProduct({ ...editingProduct, isPopular: e.target.checked })
+                            }
+                            className="w-4 h-4 rounded text-[#C8102E]"
+                          />
+                          <span>Destacar como "Mais Pedido"</span>
+                        </label>
+                      </div>
+                    </div>
 
                     <div className="space-y-1">
                       <label className="text-[11px] text-stone-400">Descrição</label>
@@ -784,7 +939,7 @@ export const AdminDashboard: React.FC = () => {
                                 {prod.available ? 'Ativo' : 'Pausado'}
                               </button>
                             </td>
-                            <td className="py-2.5 px-3 text-right space-x-1">
+                            <td className="py-2.5 px-3 text-right space-x-1 whitespace-nowrap">
                               <button
                                 onClick={() => setEditingProduct(prod)}
                                 className="p-1 rounded bg-white/5 hover:bg-white/10 text-stone-300 hover:text-white"
@@ -792,13 +947,33 @@ export const AdminDashboard: React.FC = () => {
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                              <button
-                                onClick={() => deleteProduct(prod.id)}
-                                className="p-1 rounded bg-white/5 hover:bg-red-950/40 text-red-400"
-                                title="Excluir"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {confirmDeleteId === prod.id ? (
+                                <span className="inline-flex items-center gap-1 ml-1">
+                                  <button
+                                    onClick={() => {
+                                      deleteProduct(prod.id);
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="px-1.5 py-0.5 rounded bg-[#C8102E] text-white text-[10px] font-bold"
+                                  >
+                                    Sim
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="px-1.5 py-0.5 rounded bg-white/10 text-stone-300 text-[10px]"
+                                  >
+                                    Não
+                                  </button>
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteId(prod.id)}
+                                  className="p-1 rounded bg-white/5 hover:bg-red-950/40 text-red-400"
+                                  title="Excluir"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}

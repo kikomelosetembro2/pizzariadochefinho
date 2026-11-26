@@ -34,7 +34,7 @@ export const ProductModal: React.FC = () => {
 
   // Reset customization state whenever a different product is opened
   useEffect(() => {
-    if (!product) return;
+    if (!product || activeModal !== 'product') return;
     const pizza =
       product.category === 'pizzas_tradicionais' || product.category === 'pizzas_especiais';
     setSelectedSize(pizza ? (product.priceLarge ? 'G' : 'M') : 'U');
@@ -50,7 +50,8 @@ export const ProductModal: React.FC = () => {
     } else {
       setImgLoaded(false);
     }
-  }, [product?.id, activeModal, crustOptions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id, activeModal]);
 
   const handleClose = () => {
     setSelectedProductForModal(null);

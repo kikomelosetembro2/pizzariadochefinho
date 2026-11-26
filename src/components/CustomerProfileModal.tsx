@@ -16,6 +16,8 @@ import {
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { copyTextToClipboard } from '../utils/clipboard';
+import { ORDER_STATUS_LABELS } from '../utils/orderStatus';
 import {
   formatPriceBRL,
   getWhatsAppPaymentProofUrl,
@@ -45,6 +47,15 @@ export const CustomerProfileModal: React.FC = () => {
     }
   }, [activeModal]);
 
+  useEffect(() => {
+    if (activeModal !== 'profile') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setActiveModal(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, setActiveModal]);
+
   if (activeModal !== 'profile' || !currentUser) return null;
 
   // Filter orders of this customer
@@ -70,12 +81,14 @@ export const CustomerProfileModal: React.FC = () => {
 
   const referralUrl = `${window.location.origin}?ref=${currentUser.referralCode}`;
 
-  const handleCopyReferral = () => {
-    navigator.clipboard.writeText(
+  const handleCopyReferral = async () => {
+    const ok = await copyTextToClipboard(
       `Peça sua pizza na Pizzaria do Chefinho com meu código ${currentUser.referralCode} e ganhe 5% de desconto no seu primeiro pedido! Acesse: ${referralUrl}`
     );
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
+    if (ok) {
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
   };
 
   const whatsappShareUrl = `https://wa.me/?text=${encodeURIComponent(
@@ -88,8 +101,14 @@ export const CustomerProfileModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+    <div
+      onClick={() => setActiveModal(null)}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-xl rounded-2xl bg-[#1F2421] border border-white/10 shadow-2xl text-left my-6 max-h-[92vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      >
         {/* Subtle Italian 3px Tricolor Header Accent */}
         <div className="h-[3px] w-full grid grid-cols-3">
           <div className="bg-[#008C45]" />
@@ -406,10 +425,12 @@ export const CustomerProfileModal: React.FC = () => {
                               ? 'bg-[#008C45]/20 text-[#008C45]'
                               : ord.status === 'em_entrega'
                               ? 'bg-[#C8102E]/20 text-[#C8102E]'
+                              : ord.status === 'cancelado'
+                              ? 'bg-red-950/40 text-red-300'
                               : 'bg-amber-950/40 text-amber-300'
                           }`}
                         >
-                          {ord.status === 'em_entrega' ? 'Saiu para Entrega' : ord.status}
+                          {ORDER_STATUS_LABELS[ord.status] || ord.status}
                         </span>
                       </div>
                       <div className="text-stone-400 text-[11px] mt-0.5">

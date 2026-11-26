@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   Check,
   CheckCircle2,
@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Order } from '../types';
+import { copyTextToClipboard } from '../utils/clipboard';
+import { ORDER_STATUS_RECEIPT_LABELS } from '../utils/orderStatus';
 import {
   formatPriceBRL,
   getWhatsAppPaymentProofUrl,
@@ -23,6 +25,20 @@ export const ThermalReceiptModal: React.FC = () => {
   const [copied, setCopied] = React.useState(false);
 
   const order: Order | null = activeReceiptOrder;
+
+  const handleClose = useCallback(() => {
+    setActiveModal(null);
+    setActiveReceiptOrder(null);
+  }, [setActiveModal, setActiveReceiptOrder]);
+
+  useEffect(() => {
+    if (activeModal !== 'receipt' || !order) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [activeModal, order, handleClose]);
 
   if (activeModal !== 'receipt' || !order) return null;
 
@@ -41,18 +57,15 @@ export const ThermalReceiptModal: React.FC = () => {
     window.print();
   };
 
-  const handleCopySummary = () => {
+  const handleCopySummary = async () => {
     const summary = `Pedido #${order.orderNumber} - Pizzaria do Chefinho\nTotal: ${formatPriceBRL(
       order.total
     )}\nWhatsApp: ${WHATSAPP_FORMATTED_DISPLAY}`;
-    navigator.clipboard.writeText(summary);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleClose = () => {
-    setActiveModal(null);
-    setActiveReceiptOrder(null);
+    const ok = await copyTextToClipboard(summary);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const paymentLabels: Record<string, string> = {
@@ -63,10 +76,16 @@ export const ThermalReceiptModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto">
-      <div className="relative w-full max-w-lg my-6 flex flex-col items-center">
+    <div
+      onClick={handleClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg my-6 flex flex-col items-center"
+      >
         {/* Action Controls Bar */}
-        <div className="w-full mb-3 flex items-center justify-between text-white">
+        <div className="receipt-backdrop-controls w-full mb-3 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
             <Receipt className="w-5 h-5 text-[#008C45]" />
             <span className="font-bold text-sm">Comanda PDV · Cupom Térmico</span>
@@ -119,17 +138,7 @@ export const ThermalReceiptModal: React.FC = () => {
             </div>
             <div className="text-[11px] text-gray-700">Data: {dateFormatted} (Rio Branco)</div>
             <div className="text-[11px] text-gray-700">
-              Status:{' '}
-              {
-                {
-                  pendente: 'PENDENTE COZINHA',
-                  preparando: 'EM PREPARO',
-                  em_entrega: 'SAIU PARA ENTREGA',
-                  pronto_retirada: 'PRONTO P/ RETIRADA',
-                  concluido: 'CONCLUÍDO',
-                  cancelado: 'CANCELADO',
-                }[order.status]
-              }
+              Status: {ORDER_STATUS_RECEIPT_LABELS[order.status] || order.status}
             </div>
           </div>
 
@@ -296,7 +305,7 @@ export const ThermalReceiptModal: React.FC = () => {
         </div>
 
         {/* Action Buttons Below Ticket */}
-        <div className="w-full max-w-[360px] mt-4 space-y-2">
+        <div className="receipt-backdrop-controls w-full max-w-[360px] mt-4 space-y-2">
           <a
             href={getWhatsAppReceiptUrl(order)}
             target="_blank"
