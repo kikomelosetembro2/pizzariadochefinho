@@ -12,6 +12,7 @@ import { CheckoutModal } from './components/CheckoutModal';
 import { CustomerProfileModal } from './components/CustomerProfileModal';
 import { FCMNotificationBanner } from './components/FCMNotificationBanner';
 import { Footer } from './components/Footer';
+import { GoogleDriveModal } from './components/GoogleDriveWorkspace';
 import { Header } from './components/Header';
 import { HeroBanner } from './components/HeroBanner';
 import { MenuTabs } from './components/MenuTabs';
@@ -97,6 +98,7 @@ function MainLayout() {
       <AuthModal />
       <CustomerProfileModal />
       <AdminDashboard />
+      <GoogleDriveModal />
 
       {/* PWA Offline Indicator */}
       <OfflineIndicator />

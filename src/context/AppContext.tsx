@@ -91,11 +91,12 @@ interface AppContextType {
   updateProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
   toggleProductAvailability: (id: string) => void;
+  restoreProductsFromBackup: (items: Product[]) => void;
   updateCrustPrice: (id: string, price: number) => void;
   updateExtraPrice: (id: string, price: number) => void;
   // Modals & Catalog Filter state
-  activeModal: 'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | null;
-  setActiveModal: (modal: 'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | null) => void;
+  activeModal: 'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | 'drive' | null;
+  setActiveModal: (modal: 'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | 'drive' | null) => void;
   selectedProductForModal: Product | null;
   setSelectedProductForModal: (p: Product | null) => void;
   activeReceiptOrder: Order | null;
@@ -200,7 +201,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // Modals & Navigation state
-  const [activeModal, setActiveModal] = useState<'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | null>(null);
+  const [activeModal, setActiveModal] = useState<'auth' | 'cart' | 'checkout' | 'product' | 'receipt' | 'profile' | 'admin' | 'drive' | null>(null);
   const [selectedProductForModal, setSelectedProductForModal] = useState<Product | null>(null);
   const [activeReceiptOrder, setActiveReceiptOrder] = useState<Order | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -731,6 +732,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   };
 
+  const restoreProductsFromBackup = (items: Product[]) => {
+    if (!Array.isArray(items) || items.length === 0) return;
+    setProducts(items);
+  };
+
   const updateCrustPrice = (id: string, price: number) => {
     const safePrice = Math.max(0, Number(price) || 0);
     setCrustOptions((prev) =>
@@ -780,6 +786,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateProduct,
         deleteProduct,
         toggleProductAvailability,
+        restoreProductsFromBackup,
         updateCrustPrice,
         updateExtraPrice,
         activeModal,

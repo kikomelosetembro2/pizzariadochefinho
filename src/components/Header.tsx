@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Clock,
+  HardDrive,
   Leaf,
   MapPin,
   MessageCircle,
@@ -230,6 +231,17 @@ export const Header: React.FC = () => {
                   <span className="hidden lg:inline">Escuro</span>
                 </>
               )}
+            </button>
+
+            {/* Google Drive Button */}
+            <button
+              type="button"
+              onClick={() => setActiveModal('drive')}
+              className="p-2 sm:p-2.5 rounded-xl bg-[#262C29] hover:bg-[#2E3632] border border-white/5 text-stone-300 hover:text-white transition-colors"
+              title="Google Drive — Arquivos & Backups"
+              aria-label="Abrir Google Drive"
+            >
+              <HardDrive className="w-4 h-4 text-[#008C45]" />
             </button>
 
             {/* Admin Switch icon */}

@@ -3,12 +3,21 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  ExternalLink,
+  HardDrive,
+  Loader2,
   MessageCircle,
   Printer,
   Receipt,
   X,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import {
+  DriveAuthRequiredError,
+  getAccessToken,
+  googleSignIn,
+  uploadDriveFile,
+} from '../services/googleDrive';
 import { Order } from '../types';
 import { copyTextToClipboard } from '../utils/clipboard';
 import { ORDER_STATUS_RECEIPT_LABELS } from '../utils/orderStatus';
@@ -23,10 +32,17 @@ import {
 export const ThermalReceiptModal: React.FC = () => {
   const { activeModal, setActiveModal, activeReceiptOrder, setActiveReceiptOrder } = useApp();
   const [copied, setCopied] = React.useState(false);
+  const [savingDrive, setSavingDrive] = React.useState(false);
+  const [driveSaveResult, setDriveSaveResult] = React.useState<{
+    status: 'saved' | 'error';
+    message: string;
+    webViewLink?: string;
+  } | null>(null);
 
   const order: Order | null = activeReceiptOrder;
 
   const handleClose = useCallback(() => {
+    setDriveSaveResult(null);
     setActiveModal(null);
     setActiveReceiptOrder(null);
   }, [setActiveModal, setActiveReceiptOrder]);
@@ -73,6 +89,132 @@ export const ThermalReceiptModal: React.FC = () => {
     cartao_credito: 'Cartão de Crédito',
     cartao_debito: 'Cartão de Débito',
     dinheiro: 'Dinheiro à Vista',
+  };
+
+  const buildReceiptText = (): string => {
+    const lines: string[] = [
+      '========================================',
+      '        PIZZARIA DO CHEFINHO            ',
+      '   FORNO A LENHA & PIZZA ARTESANAL      ',
+      ' Bairro Cidade do Povo, Rio Branco - AC ',
+      ` WhatsApp: ${WHATSAPP_FORMATTED_DISPLAY}`,
+      '========================================',
+      `PEDIDO #${order.orderNumber} (${isDelivery ? 'DELIVERY' : 'BALCÃO'})`,
+      `Data: ${dateFormatted} (Rio Branco)`,
+      `Status: ${ORDER_STATUS_RECEIPT_LABELS[order.status] || order.status}`,
+      '----------------------------------------',
+      `CLIENTE: ${order.customer.name}`,
+      `Tel: ${order.customer.phone}`,
+    ];
+    if (isDelivery && order.customer.address) {
+      lines.push(
+        `End: ${order.customer.address.street}, Nº ${order.customer.address.number}${
+          order.customer.address.complement ? ` (${order.customer.address.complement})` : ''
+        }`,
+        `Bairro: ${order.customer.address.neighborhood}`,
+        `Ref: ${order.customer.address.referencePoint}`,
+        `Cidade: ${order.customer.address.city}`
+      );
+    } else {
+      lines.push('Retirada no Balcão da Pizzaria');
+    }
+    lines.push('----------------------------------------', 'ITENS:');
+    order.items.forEach((item) => {
+      const sizeStr =
+        item.size && item.size !== 'U' ? ` (${item.size === 'G' ? 'Grande' : 'Média'})` : '';
+      lines.push(`${item.quantity}x ${item.name}${sizeStr} — ${formatPriceBRL(item.totalPrice)}`);
+      if (item.crust && item.crust.price > 0) {
+        lines.push(`   + Borda: ${item.crust.name} (${formatPriceBRL(item.crust.price)})`);
+      }
+      if (item.extras && item.extras.length > 0) {
+        lines.push(`   + Extras: ${item.extras.map((e) => e.name).join(', ')}`);
+      }
+      if (item.notes) {
+        lines.push(`   Obs: "${item.notes}"`);
+      }
+    });
+    lines.push(
+      '----------------------------------------',
+      `SUBTOTAL: ${formatPriceBRL(order.subtotal)}`
+    );
+    if (isDelivery) {
+      lines.push(`TAXA DE ENTREGA: ${formatPriceBRL(order.deliveryFee)}`);
+    }
+    if (order.discountLoyalty > 0) {
+      lines.push(`DESC. FIDELIDADE: -${formatPriceBRL(order.discountLoyalty)}`);
+    }
+    if (order.discountReferral > 0) {
+      lines.push(`DESC. INDICAÇÃO: -${formatPriceBRL(order.discountReferral)}`);
+    }
+    lines.push(
+      `TOTAL DO PEDIDO: ${formatPriceBRL(order.total)}`,
+      `FORMA PGTO: ${paymentLabels[order.paymentMethod] || order.paymentMethod}`
+    );
+    if (order.paymentMethod === 'dinheiro' && order.changeFor && order.changeFor > order.total) {
+      lines.push(
+        `VALOR PAGO: ${formatPriceBRL(order.changeFor)}`,
+        `TROCO: ${formatPriceBRL(order.changeReturn || order.changeFor - order.total)}`
+      );
+    }
+    if (order.notes) {
+      lines.push(`OBS GERAL: ${order.notes}`);
+    }
+    lines.push('========================================');
+    return lines.join('\n');
+  };
+
+  const handleSaveReceiptToDrive = async () => {
+    setSavingDrive(true);
+    setDriveSaveResult(null);
+    const fileName = `Comanda_Chefinho_Pedido_${order.orderNumber}.txt`;
+    const content = buildReceiptText();
+
+    try {
+      let token = await getAccessToken();
+      if (!token) {
+        const authResult = await googleSignIn();
+        token = authResult.accessToken;
+      }
+      if (!token) {
+        throw new DriveAuthRequiredError();
+      }
+
+      let uploaded;
+      try {
+        uploaded = await uploadDriveFile({
+          name: fileName,
+          mimeType: 'text/plain',
+          content,
+        });
+      } catch (err) {
+        if (err instanceof DriveAuthRequiredError) {
+          await googleSignIn();
+          uploaded = await uploadDriveFile({
+            name: fileName,
+            mimeType: 'text/plain',
+            content,
+          });
+        } else {
+          throw err;
+        }
+      }
+
+      setDriveSaveResult({
+        status: 'saved',
+        message: `Salvo no Drive: ${uploaded.name}`,
+        webViewLink: uploaded.webViewLink,
+      });
+    } catch (err) {
+      setDriveSaveResult({
+        status: 'error',
+        message:
+          err instanceof Error
+            ? err.message
+            : 'Não foi possível salvar a comanda no Google Drive.',
+      });
+    } finally {
+      setSavingDrive(false);
+    }
   };
 
   return (
@@ -325,6 +467,45 @@ export const ThermalReceiptModal: React.FC = () => {
             <Receipt className="w-4 h-4 text-[#008C45]" />
             <span>Enviar Comprovante PIX / Pagamento</span>
           </a>
+
+          <button
+            type="button"
+            disabled={savingDrive}
+            onClick={handleSaveReceiptToDrive}
+            className="w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 disabled:opacity-60 border border-white/15 text-white font-semibold text-xs flex items-center justify-center gap-2 transition"
+          >
+            {savingDrive ? (
+              <Loader2 className="w-4 h-4 animate-spin text-[#008C45]" />
+            ) : (
+              <HardDrive className="w-4 h-4 text-[#008C45]" />
+            )}
+            <span>
+              {savingDrive ? 'Salvando Comanda no Google Drive...' : 'Salvar Comanda no Drive'}
+            </span>
+          </button>
+
+          {driveSaveResult && (
+            <div
+              className={`px-3 py-2 rounded-xl border text-[11px] flex items-center justify-between gap-2 ${
+                driveSaveResult.status === 'saved'
+                  ? 'bg-[#008C45]/20 border-[#008C45]/40 text-emerald-300'
+                  : 'bg-red-950/60 border-red-500/40 text-red-300'
+              }`}
+            >
+              <span className="truncate">{driveSaveResult.message}</span>
+              {driveSaveResult.webViewLink && (
+                <a
+                  href={driveSaveResult.webViewLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 font-bold text-white hover:underline shrink-0"
+                >
+                  <span>Abrir</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          )}
 
           <div className="flex gap-2">
             <button

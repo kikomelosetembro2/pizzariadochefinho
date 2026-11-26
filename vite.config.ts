@@ -59,6 +59,7 @@ export default defineConfig(() => {
       rolldownOptions: {
         output: {
           manualChunks(id) {
+            if (id.includes('node_modules/firebase')) return 'vendor-firebase';
             if (id.includes('node_modules/react')) return 'vendor-react';
             if (id.includes('node_modules/qrcode')) return 'vendor-qrcode';
             if (id.includes('node_modules/lucide-react')) return 'vendor-icons';

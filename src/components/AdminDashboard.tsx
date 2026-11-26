@@ -8,6 +8,7 @@ import {
   Clock,
   DollarSign,
   Edit2,
+  HardDrive,
   Leaf,
   Lock,
   LogOut,
@@ -27,6 +28,7 @@ import { useApp } from '../context/AppContext';
 import { OrderStatus, ProductCategory, Product } from '../types';
 import { ORDER_STATUS_LABELS } from '../utils/orderStatus';
 import { formatPriceBRL } from '../utils/whatsapp';
+import { GoogleDriveWorkspace } from './GoogleDriveWorkspace';
 
 const PRESET_PRODUCT_IMAGES = [
   { label: 'Pizza Calabresa', url: '/images/pizza_calabresa_special_1794456660537.jpg' },
@@ -67,7 +69,7 @@ export const AdminDashboard: React.FC = () => {
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Active Admin Tab
-  const [activeTab, setActiveTab] = useState<'pedidos' | 'produtos' | 'financeiro'>('pedidos');
+  const [activeTab, setActiveTab] = useState<'pedidos' | 'produtos' | 'financeiro' | 'drive'>('pedidos');
 
   // Orders Filter
   const [orderFilter, setOrderFilter] = useState<string>('todos');
@@ -358,6 +360,18 @@ export const AdminDashboard: React.FC = () => {
               >
                 <TrendingUp className="w-4 h-4" />
                 <span>Dashboard Financeiro Semanal</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('drive')}
+                className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold border-b-2 transition whitespace-nowrap ${
+                  activeTab === 'drive'
+                    ? 'border-[#008C45] text-[#008C45]'
+                    : 'border-transparent text-stone-400 hover:text-white'
+                }`}
+              >
+                <HardDrive className="w-4 h-4" />
+                <span>Google Drive</span>
               </button>
             </div>
 
@@ -1285,6 +1299,13 @@ export const AdminDashboard: React.FC = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB 4: GOOGLE DRIVE */}
+            {activeTab === 'drive' && (
+              <div className="overflow-y-auto flex-1">
+                <GoogleDriveWorkspace />
               </div>
             )}
           </>
